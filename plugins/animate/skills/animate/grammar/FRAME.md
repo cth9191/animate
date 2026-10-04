@@ -20,7 +20,7 @@ It exists because a storyboard drawn as correct-but-plain labelled diagrams came
 
 ## A hero device for long time spans
 
-Give "the idea" a body. Each style has a hero in its kit (cut paper: the spark, which gains a ray per era; crosshatch: an ink dot with eyes; pixel: a sprite with a two-frame idle; math: a π character beside the graph). Reserve its colour for it alone.
+Give "the idea" a body. Each style has a hero in its kit (cut paper: the spark, which gains a ray per era; crosshatch: an ink dot with eyes; pixel: a sprite with a two-frame idle; isometric: a small cube-bot; math: a π character beside the graph). Reserve its colour for it alone.
 
 ## Process
 

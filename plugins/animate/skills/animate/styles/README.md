@@ -11,6 +11,7 @@ A style is a plug-in: the story, formats, timing, sound, renderer and tools stay
 | [riso](riso/STYLE.md) | a three-ink risograph print: halftone screens, overprints, misregistration | on 2s | a 6s frame-matched study |
 | [sketchbook](sketchbook/STYLE.md) | graphite and one accent colour on a sketchbook page, hand lettering | on 2s | a 15s explainer |
 | [math](math/STYLE.md) | a manim-style math explainer: black stage, axes and graphs, colour-coded variables, smooth easing | on 1s | two short math explainers |
+| [isometric](isometric/STYLE.md) | isometric product line art: constant hairlines, white faces, rounded slabs, one dark accent; light or dark ground | on 1s, spring settles | this demo (the first style made with new-style.md) |
 | [pixel](pixel/STYLE.md) | low-resolution eras: draw at the true resolution, upscale nearest-neighbour | on 1s or 2s | a fixed-stage history of AI video |
 
 A new look gets made from the user's references with [new-style.md](../new-style.md), then saved as a style beside the project's pieces (`<project>/styles/<name>/`), where `build.mjs` finds it.

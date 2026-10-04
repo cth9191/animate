@@ -4,7 +4,7 @@ A Claude Code skill that makes short animated videos entirely in code: one `<can
 
 ![the built-in styles](docs/styles.png)
 
-*The built-in styles, each a frame from its demo piece: cut paper, crosshatch ink, riso print, sketchbook, math, pixel.*
+*The built-in styles, each a frame from its demo piece: cut paper, crosshatch ink, riso print, sketchbook, math, pixel, isometric.*
 
 ## How it works
 
@@ -31,6 +31,7 @@ A style is a plug-in: the story grammar, timing, sound, renderer and tools stay 
 | sketchbook | graphite and one accent colour on a sketchbook page, hand lettering |
 | math | a manim-style math explainer: black stage, axes and graphs, colour-coded variables, smooth easing |
 | pixel | low-resolution eras: drawn at the true resolution, upscaled nearest-neighbour, a bitmap font |
+| isometric | precise isometric line art: constant hairlines, white faces hiding what's behind, rounded slabs, one dark accent; light or dark ground |
 
 **Your own look:** give the skill references (a video, stills, a web page) and it follows a procedure — measure the palette, line weight, texture, motion and cut rhythm; draw 1–2 matched frames next to your references (`tools/compare.mjs`); ask for your thumbs up; save it as `styles/<name>/` in your project so every later piece can use it. Reference media stays on your machine.
 

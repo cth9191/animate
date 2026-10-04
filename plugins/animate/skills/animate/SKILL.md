@@ -1,6 +1,6 @@
 ---
 name: animate
-description: Make a short procedural animation in any style — an explainer, a history, a little story — as a single-file canvas video with a synthesized score, rendered to MP4. Ships with styles (cut paper, crosshatch ink, riso print, sketchbook, manim-style math, pixel art) and makes new ones from the user's references. Walks the user through intake, then three check-ins (story, look, storyboard) before animating, and proves the result with measured review checks. Use when the user asks for an animated video, short, explainer or reel made in code, or wants a look matched from references.
+description: Make a short procedural animation in any style — an explainer, a history, a little story — as a single-file canvas video with a synthesized score, rendered to MP4. Ships with styles (cut paper, crosshatch ink, riso print, sketchbook, manim-style math, pixel art, isometric line art) and makes new ones from the user's references. Walks the user through intake, then three check-ins (story, look, storyboard) before animating, and proves the result with measured review checks. Use when the user asks for an animated video, short, explainer or reel made in code, or wants a look matched from references.
 argument-hint: "[what the video is about] [style or reference]"
 ---
 
@@ -89,4 +89,4 @@ A 45–60s piece has 10–15 scenes; split the drawing across agents once the st
 | [examples/history-of-ai/](examples/history-of-ai/) | a full 60s worked example (cut paper) | when unsure how something fits |
 
 ## Honesty about what's proven
-Formats F2 (chronology / morph chain) and F4 (mission) have each produced a piece that passed every check from the card alone; F5 (fixed-hero journey) has several. The others are documented from study but unproven — say so when you pick one. Cut paper and crosshatch have carried full pieces; riso, sketchbook, math and pixel each come from one or two finished pieces plus a demo; a style made from new references is new ground until it has carried a piece. WebGL motion design (ray-marched 3D, motion blur, bloom) is not a shipped style yet.
+Formats F2 (chronology / morph chain) and F4 (mission) have each produced a piece that passed every check from the card alone; F5 (fixed-hero journey) has several. The others are documented from study but unproven — say so when you pick one. Cut paper and crosshatch have carried full pieces; riso, sketchbook, math and pixel each come from one or two finished pieces plus a demo; isometric was made from references with new-style.md and so far has only its demo; a style made from new references is new ground until it has carried a piece. WebGL motion design (ray-marched 3D, motion blur, bloom) is not a shipped style yet.

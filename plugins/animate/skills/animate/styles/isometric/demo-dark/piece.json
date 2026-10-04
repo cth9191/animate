@@ -1,0 +1,9 @@
+{
+  "name": "isometric-demo-dark",
+  "title": "Isometric demo (dark ground)",
+  "format": { "width": 1080, "height": 1920, "fps": 24, "bpm": 120, "duration": 6.0, "frames": 144 },
+  "storyFormat": "morph chain (2 eras, 1 shape morph)",
+  "style": "isometric",
+  "build": ["../demo/src/head.html", "dark.js", "kit/core.js", "style", "../demo/src/scenes.js", "../demo/src/bridges.js", "kit/morph.js", "kit/board.js", "kit/score-head.js", "../demo/src/score.js", "kit/score-tail.js"],
+  "review": { "safe": { "top": 240, "bottom": 420, "right": 140 }, "refs": {} }
+}

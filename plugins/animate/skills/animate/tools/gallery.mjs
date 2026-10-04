@@ -12,7 +12,7 @@ const { chromium } = (() => { try { return require('playwright'); } catch { retu
 const [out, ...extra] = process.argv.slice(2);
 if (!out) { console.error('usage: node tools/gallery.mjs <out.png> [extra styles dirs...]'); process.exit(2); }
 const SKILL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ORDER = ['cut-paper', 'crosshatch', 'riso', 'sketchbook', 'math', 'pixel'];
+const ORDER = ['cut-paper', 'crosshatch', 'riso', 'sketchbook', 'math', 'pixel', 'isometric'];
 const items = [];
 for (const dir of [path.join(SKILL, 'styles'), ...extra.map((d) => path.resolve(d))]) {
   if (!fs.existsSync(dir)) continue;

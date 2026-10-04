@@ -8,7 +8,7 @@
     {
       "name": "animate",
       "source": "./plugins/animate",
-      "description": "Short procedural animations in any style — six built in, or matched from your references — as single-file canvas videos, built through story, look and storyboard check-ins."
+      "description": "Short procedural animations in any style — seven built in, or matched from your references — as single-file canvas videos, built through story, look and storyboard check-ins."
     }
   ]
 }
