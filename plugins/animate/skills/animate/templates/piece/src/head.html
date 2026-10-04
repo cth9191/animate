@@ -7,7 +7,7 @@
 <style>
   html, body { margin: 0; height: 100%; background: #1b1714; overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; }
-  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+  canvas { max-width: 100vw; max-height: 100vh; width: auto; height: auto; display: block; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -15,36 +15,49 @@
 <script>
 "use strict";
 // =====================================================================
-//  STARTER PIECE — 9:16, 8.0s @ 120 BPM, 24fps. Two eras joined by one shape morph (the moon becomes the sun).
-//  Replace the eras, shots, cues, acts and board with your piece's. Build: node <skill>/tools/build.mjs <this piece dir>
-//  Open index.html in a browser to preview (click to hear the score; ?t=2.5 freezes a frame).
+//  STARTER PIECE — 8.0s @ 120 BPM, 24fps, in any of the formats below. Two eras joined by one shape morph
+//  (the moon becomes the sun). Replace the eras, shots, cues, acts and board with your piece's.
+//  Build: node <skill>/tools/build.mjs <this piece dir>. Preview: open index.html (click to hear the score;
+//  ?t=2.5 freezes a frame; ?format=16:9 shows another format). Export all: export.mjs <piece> --formats 9:16,1:1,16:9
+//  Scenes place things with LX(fraction of width), LY(fraction of height) and size them with UNIT (kit/core.js),
+//  so one piece re-lays itself out for each format instead of being cropped.
 // =====================================================================
-const FPS = 24, W = 1080, H = 1920;
-const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;   // 0.5 / 0.25 / 0.125s = 12 / 6 / 3 frames
+const FORMATS = { '9:16': [1080, 1920], '4:5': [1080, 1350], '1:1': [1080, 1080], '16:9': [1920, 1080] };
+const FORMAT = new URLSearchParams(location.search).get('format') || '9:16';   // the piece's main format first
+const FPS = 24, [W, H] = FORMATS[FORMAT];
+{ const cv = document.getElementById('c'); cv.width = W; cv.height = H; }
+// a supplied music track: tools/beats.mjs writes beats.json and build.mjs injects it as BEATS (see SKILL.md -> Music)
+const BPM = typeof BEATS !== 'undefined' ? BEATS.bpm : 120, GRID0 = typeof BEATS !== 'undefined' ? BEATS.offset : 0;
+const BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;   // at 120 BPM: 0.5 / 0.25 / 0.125s = 12 / 6 / 3 frames
 const DURATION = 8.0;
 const NFRAMES = Math.round(DURATION * FPS);
 const LOOP_T = NFRAMES / FPS;
-const SAFE = { top: 240, bottom: 420, right: 140 };          // 9:16 platform UI; keep content in x 60–940, y 250–1500
+// the platform UI per format (9:16: keep content in x 60–940, y 250–1500)
+const SAFE = { '9:16': { top: 240, bottom: 420, right: 140 }, '4:5': { top: 80, bottom: 160, right: 60 }, '1:1': { top: 60, bottom: 110, right: 60 }, '16:9': { top: 60, bottom: 110, right: 60 } }[FORMAT];
 const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive';   // local handwriting fonts: Windows, macOS, Linux
-const CX = 470;                                               // caption centre (left of the right-hand UI strip)
+const CX = (W - SAFE.right) / 2;                              // caption centre (left of the right-hand UI strip on 9:16)
 
+// onBeat(t): the nearest 8th of the grid — the song's when a track is supplied (BEATS), else 120 BPM from 0.
+// Put every cut, morph and big cue on it, so a supplied track only shifts them to its own beats.
+const onBeat = (t) => +(GRID0 + Math.round((t - GRID0) / E8) * E8).toFixed(4);
+const M1 = onBeat(4.0);                                      // the morph: the moon becomes the sun
 // eras: [t0, t1, scene]. Boundaries with a BRIDGE (src/bridges.js) morph; the rest are hard cuts.
-const ERA_LIST = [[0, 4, () => sceneNight()], [4, 8, () => sceneMorning()]];
+const ERA_LIST = [[0, M1, () => sceneNight()], [M1, DURATION, () => sceneMorning()]];
 const SHOTS = [
-  //  key        era  t0    t1    title
-  ['night',      0,   0.0,  4.0,  'the spark wakes up'],
-  ['morning',    1,   4.0,  8.0,  'the moon becomes the sun; the garden grows'],
+  //  key        era  t0    t1        title
+  ['night',      0,   0.0,  M1,       'the spark wakes up'],
+  ['morning',    1,   M1,   DURATION, 'the moon becomes the sun; the garden grows'],
 ];
 const TIMELINE = {
-  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  width: W, height: H, fps: FPS, bpm: BPM, gridOffset: GRID0, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE, aspect: FORMAT,
   format: 'morph-chain',   // 'F2' adds the fixed-stage checks (a year counter, a still stage); 'F4' adds the mission checks
   shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
   cuts: [],              // hard cuts (seconds, on the 8th grid)
-  morphs: [4.0],         // morph bridge centres (seconds, on the 8th grid)
-  cues: { wake: 1.0, flowers: 4.75 },
+  morphs: [M1],          // morph bridge centres (seconds, on the 8th grid)
+  cues: { wake: onBeat(1.0), flowers: onBeat(4.75) },
   acts: [
-    { name: '1 Night',   role: 'build', t0: 0.0, t1: 4.0 },
-    { name: '2 Morning', role: 'gift',  t0: 4.0, t1: 8.0 },
+    { name: '1 Night',   role: 'build', t0: 0.0, t1: M1 },
+    { name: '2 Morning', role: 'gift',  t0: M1, t1: DURATION },
   ],
   // the storyboard: one key frame per beat
   board: [

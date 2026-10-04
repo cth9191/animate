@@ -1,6 +1,6 @@
 // test tile: render chosen frames into a grid (each 270x480) with the phone-UI safe zones drawn in red; print timings +
 // determinism (every frame rendered twice, the second pass in reverse order; any difference is listed)
-// usage: node tools/tile.mjs <piece dir> out.png f0 f1 f2 ...   (frame numbers at TIMELINE.fps)
+// usage: node tools/tile.mjs <piece dir> out.png f0 f1 f2 ... [--format 1:1]   (frame numbers at TIMELINE.fps)
 //        (the older form PIECE=<piece dir> node tools/tile.mjs out.png f0 ... still works)
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
@@ -10,18 +10,19 @@ import { pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
 const { chromium } = (() => { try { return require('playwright'); } catch { return require(path.join(execSync('npm root -g').toString().trim(), 'playwright')); } })();
 const argv = process.argv.slice(2);
+const fmtI = argv.indexOf('--format'), format = fmtI >= 0 ? argv.splice(fmtI, 2)[1] : null;
 const isPiece = (a) => a && (a.endsWith('.html') || (fs.existsSync(a) && fs.statSync(a).isDirectory()));
 const piece = isPiece(argv[0]) ? argv.shift() : process.env.PIECE;
 const [out, ...fr] = argv;
 if (!piece || !out || !fr.length) { console.error('usage: node tools/tile.mjs <piece dir> out.png f0 f1 ...'); process.exit(2); }
 const frames = fr.map(Number);
-const URL = pathToFileURL(path.resolve(piece.endsWith('.html') ? piece : path.join(piece, 'index.html'))).href + '?export=1';
+const URL = pathToFileURL(path.resolve(piece.endsWith('.html') ? piece : path.join(piece, 'index.html'))).href + '?export=1' + (format ? `&format=${encodeURIComponent(format)}` : '');
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1080, height: 1920 } });
 p.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
 p.on('console', (m) => console.error('console:', m.type(), m.text()));
 await p.goto(URL);
-await p.waitForFunction(() => window.TIMELINE, null, { timeout: 30000 });
+await p.waitForFunction(() => window.TIMELINE && window.renderFrame, null, { timeout: 30000 });
 { const fo = await p.evaluate(() => window.FONTS_OK); if (fo !== undefined) console.log('fonts ok:', fo); }
 const res = await p.evaluate(async (frames) => {
   const cols = Math.min(6, frames.length), rows = Math.ceil(frames.length / cols), s = 0.25;

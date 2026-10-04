@@ -10,5 +10,5 @@
 const ERA_BG = ['#26315f', '#a9d9c6'];
 function pieceCam(era, t) { return null; }
 const BRIDGES = [
-  { tc: 4.0, A: () => ({ P: ellipsePts(780, 420, 40, 40, 0, 64), c: '#f6ecc8' }), B: () => ({ P: ellipsePts(780, 420, 80, 80, 0, 64), c: PAL.yellow }) },   // the moon -> the sun
+  { tc: TIMELINE.morphs[0], A: () => { const [x, y, r] = MOON(); return { P: ellipsePts(x, y, r, r, 0, 64), c: '#f6ecc8' }; }, B: () => { const [x, y, r] = SUN(); return { P: ellipsePts(x, y, r, r, 0, 64), c: PAL.yellow }; } },   // the moon -> the sun (shapes from src/scenes.js)
 ];

@@ -98,11 +98,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const require = createRequire(import.meta.url);
   const { chromium } = (() => { try { return require('playwright'); } catch { return require(path.join(execSync('npm root -g').toString().trim(), 'playwright')); } })();
   const args = process.argv.slice(2), ei = args.indexOf('--every'), every = ei >= 0 ? Number(args.splice(ei, 2)[1]) : 6;
+  const fmtI = args.indexOf('--format'), format = fmtI >= 0 ? args.splice(fmtI, 2)[1] : null;
   if (!args[0]) { console.error('usage: node tools/textcheck.mjs <piece dir> [--every 6]'); process.exit(2); }
   const file = args[0].endsWith('.html') ? args[0] : path.join(args[0], 'index.html');
   const browser = await chromium.launch(), page = await browser.newPage();
   page.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
-  await page.goto(pathToFileURL(path.resolve(file)).href + '?export=1');
+  await page.goto(pathToFileURL(path.resolve(file)).href + '?export=1' + (format ? `&format=${encodeURIComponent(format)}` : ''));
   await page.waitForFunction(() => window.TIMELINE && window.renderFrame);
   const safe = await page.evaluate(() => (window.TIMELINE.height > window.TIMELINE.width ? window.TIMELINE.safe || { top: 240, bottom: 420, right: 140 } : null));
   const pj = path.join(args[0].endsWith('.html') ? path.dirname(args[0]) : args[0], 'piece.json');

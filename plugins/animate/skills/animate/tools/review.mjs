@@ -11,6 +11,10 @@
 //   6. anchor (if TIMELINE.anchor and window.anchorAt(t)): how often the protagonist sits on its screen spot
 //   7. text (tools/textcheck.mjs): strings cut off by the frame, overlapping other text, or under the phone UI
 //   8. sound (if renders/audio.wav): the loudest 100ms window, the silence before it, integrated loudness (LUFS), true peak
+//   9. dead beats: stretches longer than review.deadMax (default 3s) where the picture barely changes; review/phone.jpg
+//      (one frame a second at 360px wide: read it at phone size)
+// A supplied track's grid: TIMELINE.gridOffset (the first beat) shifts the 8th/16th grid; cuts pass within half a frame.
+// --format 1:1 reviews another format's render (renders/final-<w>x<h>.mp4 -> review-<w>x<h>/)
 //
 // The beat grid comes from TIMELINE.bpm (default 100): 8ths = 30/bpm s, 16ths = 15/bpm s.
 //
@@ -18,7 +22,7 @@
 //   a path with a slash resolves from where you run the tool (the project); a bare name is looked for in
 //   references/, references/stills/ and every references/<look>/ folder
 //
-// usage: node tools/review.mjs pieces/<name>
+// usage: node tools/review.mjs pieces/<name> [--format 1:1]
 import { createRequire } from 'node:module';
 import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -33,9 +37,9 @@ const { chromium } = (() => { try { return require('playwright'); } catch { retu
 const REPO = process.cwd();   // reference images resolve from where you run the tool
 if (!process.argv[2]) { console.error('usage: node tools/review.mjs pieces/<name>'); process.exit(2); }
 const ROOT = path.resolve(process.argv[2]);
-const REVIEW = path.join(ROOT, 'review');
-const VIDEO = path.join(ROOT, 'renders', 'final.mp4');
-fs.mkdirSync(REVIEW, { recursive: true });
+const FORMAT = process.argv.includes('--format') ? process.argv[process.argv.indexOf('--format') + 1] : null;
+let REVIEW = path.join(ROOT, 'review');
+let VIDEO = path.join(ROOT, 'renders', 'final.mp4');
 
 const PIECE = JSON.parse(fs.readFileSync(path.join(ROOT, 'piece.json'), 'utf8'));
 const REF_FOR = PIECE.review?.refs || {};
@@ -48,11 +52,11 @@ const refPath = (n) => {
 };
 
 // ---- read TIMELINE + frame->shot mapping straight from index.html
-const PAGE_URL = pathToFileURL(path.join(ROOT, 'index.html')).href + '?export=1';
+const PAGE_URL = pathToFileURL(path.join(ROOT, 'index.html')).href + '?export=1' + (FORMAT ? `&format=${encodeURIComponent(FORMAT)}` : '');
 let browser = await chromium.launch();
 let page = await browser.newPage();
 await page.goto(PAGE_URL);
-await page.waitForFunction(() => window.TIMELINE);
+await page.waitForFunction(() => window.TIMELINE && window.renderFrame);
 // WebGL pieces (TIMELINE.gpu) re-open on the real GPU: the anchor pass renders hundreds of frames
 if (await page.evaluate(() => !!window.TIMELINE.gpu)) {
   await browser.close();
@@ -81,11 +85,15 @@ const info = await page.evaluate(() => {
     cutFrames: T.cuts.map((c) => { let f = 0; while (f < T.frames && !past(f / T.fps, c)) f++; return f; }),
   };
 });
-const TXT = await textCheck(page, { safe: info.T.height > info.T.width ? PIECE.review?.safe || info.T.safe || { top: 240, bottom: 420, right: 140 } : null });
+const TXT = await textCheck(page, { safe: info.T.height > info.T.width ? info.T.safe || PIECE.review?.safe || { top: 240, bottom: 420, right: 140 } : null });
 await browser.close();
 const { T } = info;
+// another format than the main one: its own render and review folder
+if (FORMAT && FORMAT !== (PIECE.formats || [])[0]) { const suf = `-${T.width}x${T.height}`; VIDEO = path.join(ROOT, 'renders', `final${suf}.mp4`); REVIEW = path.join(ROOT, `review${suf}`); }
+fs.mkdirSync(REVIEW, { recursive: true });
+if (!fs.existsSync(VIDEO)) { console.error('no render at', VIDEO, '- run export.mjs first'); process.exit(1); }
 const FW = T.width || 1080, FH = T.height || 1080, VERTICAL = FH > FW;
-const SAFE = PIECE.review?.safe || T.safe || { top: 240, bottom: 420, right: 140 };
+const SAFE = T.safe || PIECE.review?.safe || { top: 240, bottom: 420, right: 140 };
 
 // ---- decode final.mp4 to small grayscale frames for pixel-difference measurements
 const SW = 96, SH = Math.round((96 * FH) / FW / 2) * 2, PX = SW * SH;
@@ -139,23 +147,23 @@ for (const shot of T.shots) {
 
 // ---- cut timing
 const irisEnds = (T.cues?.irisClose || []).map(([, e]) => e);
-const E8 = 30 / (T.bpm || 100), E16 = E8 / 2;
+const E8 = 30 / (T.bpm || 100), E16 = E8 / 2, OFF = T.gridOffset || 0;   // OFF: a supplied track's first beat
 const gridFor = (c) => (T.fastFrom != null && c >= T.fastFrom - 1e-6 && (T.fastTo == null || c < T.fastTo - 1e-6) ? E16 : E8);   // 16ths inside [fastFrom, fastTo)
 console.log(`\nCUTS vs beat grid @ ${T.bpm || 100} BPM, ${T.fps}fps (8ths = ${+E8.toFixed(4)}s${T.fastFrom != null ? `; 16ths = ${+E16.toFixed(4)}s allowed from ${T.fastFrom}s${T.fastTo != null ? ` to ${T.fastTo}s` : ''}` : ''})`);
 console.log(' #   cut t     grid  grid#   nominal f  cut f   cut f t     err(f)  Δ@cut  peak(±2f)          shot change           result');
 let allPass = true;
 T.cuts.forEach((c, i) => {
-  const fc = info.cutFrames[i], nominal = c * T.fps, err = fc - nominal, g = gridFor(c), gi = c / g;
+  const fc = info.cutFrames[i], nominal = c * T.fps, err = fc - nominal, g = gridFor(c), gi = (c - OFF) / g;
   let peak = fc, best = -1;
   for (let f = Math.max(1, fc - 2); f <= Math.min(nFrames - 1, fc + 2); f++) if (diff[f] > best) { best = diff[f]; peak = f; }
   const peakNote = Math.abs(peak - fc) <= 1 ? `f${peak} ok` : irisEnds.some((e) => Math.abs(e - c) < 1e-6) ? `f${peak} (iris fills first)` : `f${peak} CHECK`;
   const shotChange = fc > 0 && info.shotOf[fc] !== info.shotOf[fc - 1] ? `shot ${info.shotOf[fc - 1]} -> ${info.shotOf[fc]}` : 'in-shot cut';
-  const pass = Math.abs(err) <= 1 && Math.abs(gi - Math.round(gi)) < 1e-6;
+  const pass = Math.abs(err) <= 1 && Math.abs(gi - Math.round(gi)) * g * T.fps <= 0.5 + 1e-6;   // on the grid within half a frame
   allPass = allPass && pass;
   console.log(`${String(i + 1).padStart(2)}  ${c.toFixed(3).padStart(7)}s  ${g === E16 ? '16th' : ' 8th'}  ${Math.round(gi).toString().padStart(4)}   ${nominal.toFixed(1).padStart(8)}  ${String(fc).padStart(5)}   ${(fc / T.fps).toFixed(4)}s  ${(err >= 0 ? '+' : '') + err.toFixed(1)}   ${diff[fc].toFixed(1).padStart(5)}  ${peakNote.padEnd(18)} ${shotChange.padEnd(20)}  ${pass ? 'PASS' : 'FAIL'}`);
 });
 console.log(`all cuts on grid within 1 frame: ${allPass ? 'PASS' : 'FAIL'}`);
-if (T.morphs?.length) { const ok = T.morphs.every((m) => Math.abs(m / E8 - Math.round(m / E8)) < 1e-6); console.log(`MORPHS: ${T.morphs.length} shape-morph bridges at ${T.morphs.join(', ')}s, ${ok ? 'all' : 'NOT all'} centred on the 8th grid: ${ok ? 'PASS' : 'FAIL'}`); }
+if (T.morphs?.length) { const ok = T.morphs.every((m) => Math.abs((m - OFF) / E8 - Math.round((m - OFF) / E8)) * E8 * T.fps <= 0.5 + 1e-6); console.log(`MORPHS: ${T.morphs.length} shape-morph bridges at ${T.morphs.join(', ')}s, ${ok ? 'all' : 'NOT all'} centred on the 8th grid: ${ok ? 'PASS' : 'FAIL'}`); }
 
 // ---- pacing
 const loopT = T.loop || T.frames / T.fps;
@@ -346,5 +354,27 @@ if (fs.existsSync(WAV)) {
   console.log(`  loudest 100ms window: ${(L / 10).toFixed(1)}s (${db[L].toFixed(1)} dBFS)${gift ? ` - ${L / 10 >= gift.t0 && L / 10 < gift.t1 ? 'in' : 'NOT in'} the payoff act ${gift.t0}-${gift.t1}s` : ''}`);
   console.log(`  silence before it: ${(best / 10).toFixed(1)}s at <= -40 dBFS${best ? ` ending ${((bestEnd + 1) / 10).toFixed(1)}s` : ''} in the 2s before (craft.md wants 0.5-4s when the story has a turn)`);
   console.log(`  loudness: ${I != null ? I.toFixed(1) + ' LUFS integrated' : 'n/a'}, range ${LRA != null ? LRA.toFixed(1) + ' LU' : 'n/a'}, true peak ${TP != null ? TP.toFixed(1) + ' dBFS' : 'n/a'} (phone target about -16 to -14 LUFS, peak <= -1)`);
+}
+// ---- dead beats: something new should happen every 2-4s; flag stretches where the picture barely changes
+{
+  const step = Math.max(1, Math.round(T.fps / 4)), lag = Math.round(T.fps / 2), pts = [];
+  for (let f = lag; f < nFrames; f += step) pts.push([f, frameDiff(f, f - lag)]);
+  const sorted = pts.map((p) => p[1]).sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)] || 0;
+  const thr = Math.max(0.8, 0.25 * med), deadMax = PIECE.review?.deadMax ?? 3.0;
+  const held = (T.acts || []).filter((a) => a.role === 'silence');
+  const runs = []; let r0 = null;
+  for (const [f, d] of [...pts, [nFrames, 1e9]]) {
+    const t = f / T.fps, still = d < thr && !held.some((a) => t >= a.t0 && t < a.t1);
+    if (still && r0 == null) r0 = t; else if (!still && r0 != null) { if (t - r0 >= deadMax) runs.push([r0, t]); r0 = null; }
+  }
+  console.log(`\nDEAD BEATS (the picture's change over 0.5s, every ${(step / T.fps).toFixed(2)}s; median ${med.toFixed(2)}, "still" below ${thr.toFixed(2)}; silence acts are exempt)`);
+  for (const [a, b] of runs) console.log(`  WARN  ${a.toFixed(2)}-${b.toFixed(2)}s: ${(b - a).toFixed(1)}s with nothing new on screen (deadMax ${deadMax}s) — add a move, a reveal or a cut`);
+  console.log(`dead beats: ${runs.length ? 'WARN' : 'PASS'} (${runs.length} stretch${runs.length === 1 ? '' : 'es'} over ${deadMax}s)`);
+}
+// ---- the phone sheet: one frame a second at 360px wide, the size people watch at
+{
+  const cols = 6, rows = Math.ceil(nFrames / T.fps / cols), out = path.join(REVIEW, 'phone.jpg');
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', VIDEO, '-vf', `fps=1,scale=360:-2,tile=${cols}x${rows}`, '-frames:v', '1', '-q:v', '3', out]);
+  console.log(r.status === 0 ? `PHONE SHEET: ${path.relative(ROOT, out)} (one frame a second at 360px wide — read every caption at this size)` : 'phone sheet failed');
 }
 console.log(`\nvideo: ${FW}x${FH}, ${nFrames} frames decoded`);

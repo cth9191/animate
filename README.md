@@ -12,7 +12,7 @@ The skill walks you through a few questions, then makes you approve three cheap 
 
 | step | what you see | you decide |
 |---|---|---|
-| 0. Intake | a handful of questions (subject, length, voice, the look, hero) and the style gallery | answers, a style, or your references |
+| 0. Intake | a handful of questions (subject, formats, voice, the look, hero, your music, your product) and the style gallery | answers, a style, or your references |
 | 1. Story check | the format it picked and a numbered beat table, facts web-checked | approve / change beats |
 | 2. Look check | 2–4 full-size style frames (for a new look: side-by-side comparisons with your references) | thumbs up per frame |
 | 3. Storyboard | every beat as a key frame, with sound and the transition into the next | thumbs up/down by panel number |
@@ -43,6 +43,10 @@ Each style folder has a `STYLE.md` (its rules, palette, motion habits and a fram
 - **A kit** (`kit/`) — seeded randomness and a line that boils on 2s; cameras; a renderer with shape-morph transitions (the old world closes in on one object, it morphs into the next world's counterpart, the new world opens out of it) that draws through the style's hooks; a storyboard; a synthesizer and a loudness stage for phone playback.
 - **Tools** (`tools/`) — build (assembles one self-contained `index.html` from the piece, the kit and the style), test tiles, stills, storyboard, export (frames → WAV + stems → MP4), review (contact sheets and the measured checks, including text that's cut off or overlapping, and loudness), compare (reference vs frame), a reference measurer, gallery, and a frame-hash check that a kit change left a piece pixel-identical.
 - **Craft rules** (`craft.md`) — everything learned building these pieces, from "the sustained pad sets a section's loudness, not the plucks" to "cameras put a world point on a screen point".
+- **Your own music** — give it a track and it maps the beats (tempo, bars, the big hits, the drops), cuts on the song's beats and puts the payoff on its loudest hit; or it composes a score in code.
+- **Your real product** — it screenshots your site (or takes your logo files) and animates the real screens inside the style.
+- **Every format from one piece** — 9:16, 1:1, 4:5 and 16:9 laid out for each shape, not cropped.
+- **Motion that feels expensive** — closed-form springs in the kit and optional motion blur for smooth styles.
 - **Parallel builds** — long pieces split one scene file per agent, joined by the build.
 
 **Coming:** a WebGL motion-design style (ray-marched 3D, sub-frame motion blur, bloom) — the export and review tools already run WebGL pieces on the GPU and warn when only software rendering is available.
@@ -70,6 +74,7 @@ Or copy the skill folder by hand: `plugins/animate/skills/animate/` → `~/.clau
 /animate a 45-second history of the bicycle, cut paper
 /animate how a hash map works, in the math style
 /animate a short about our API in the style of these screenshots: ./refs/
+/animate a 20s launch reel for https://my-product.com, cut to ./audio/song.mp3, vertical and square
 ```
 
 Pieces are created in your project under `pieces/<name>/`. You can also drive the tools yourself:
@@ -80,7 +85,9 @@ node $SKILL/tools/build.mjs pieces/my-piece
 node $SKILL/tools/tile.mjs pieces/my-piece tile.png 24 48 96
 node $SKILL/tools/still.mjs pieces/my-piece 2.5,9,14 frames.png --scale 0.5
 node $SKILL/tools/storyboard.mjs pieces/my-piece
-node $SKILL/tools/export.mjs pieces/my-piece --share
+node $SKILL/tools/beats.mjs pieces/my-piece/audio/track.wav pieces/my-piece --start 12
+node $SKILL/tools/capture.mjs https://my-product.com pieces/my-piece/assets/home.png
+node $SKILL/tools/export.mjs pieces/my-piece --share --formats 9:16,1:1,16:9
 node $SKILL/tools/review.mjs pieces/my-piece
 node $SKILL/tools/measure/refs.mjs references/my-look/
 node $SKILL/tools/compare.mjs references/my-look/a.png pieces/my-piece 2.5 compare.png --auto-trim

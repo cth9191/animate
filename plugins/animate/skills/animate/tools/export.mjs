@@ -9,7 +9,13 @@
 //
 // Frame size comes from TIMELINE.width / TIMELINE.height (defaults to 1080x1080).
 //
-// usage: node tools/export.mjs pieces/<name> [--from N] [--to N] [--workers 4] [--no-audio] [--no-mux] [--no-captions] [--only-audio] [--share] [--gpu]
+// formats:  --format 1:1 renders one other format (the page reads ?format=); --formats 9:16,1:1,16:9 renders each
+//            (frames-<w>x<h>/ and renders/final-<w>x<h>.mp4 for every format but the piece's main one)
+// blur:     --blur 4 averages 4 sub-frames per frame (a 180-degree shutter) — styles on 1s only (STYLE.ones)
+// music:    piece.json "music": { "file": "audio/track.wav", "start": 0, "gain": 0, "fade": 0.5 } — the user's track
+//           replaces the synthesized music; the score's sfx bus is mixed on top, then loudness to -14 LUFS
+//
+// usage: node tools/export.mjs pieces/<name> [--from N] [--to N] [--workers 4] [--no-audio] [--no-mux] [--no-captions] [--only-audio] [--share] [--gpu] [--format F | --formats A,B] [--blur N]
 import { createRequire } from 'node:module';
 import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -26,7 +32,7 @@ function loadPlaywright() {
 }
 const { chromium } = loadPlaywright();
 
-const USAGE = 'usage: node tools/export.mjs pieces/<name> [--from N] [--to N] [--workers 4] [--no-audio] [--no-mux] [--no-captions] [--only-audio] [--share] [--gpu]';
+const USAGE = 'usage: node tools/export.mjs pieces/<name> [--from N] [--to N] [--workers 4] [--no-audio] [--no-mux] [--no-captions] [--only-audio] [--share] [--gpu] [--format F | --formats A,B] [--blur N]';
 const argv = process.argv.slice(2);
 if (!argv[0] || argv[0].startsWith('--')) { console.error(USAGE); process.exit(2); }
 const ROOT = path.resolve(argv[0]);
@@ -35,11 +41,22 @@ const RENDERS = path.join(ROOT, 'renders');
 const opt = (name, dflt) => { const i = argv.indexOf('--' + name); return i >= 0 ? argv[i + 1] : dflt; };
 const flag = (name) => argv.includes('--' + name);
 
+// --formats a,b,c: run this exporter once per format, then stop
+if (opt('formats')) {
+  const list = opt('formats').split(','), rest = argv.slice(1).filter((a, i, A) => a !== '--formats' && A[i - 1] !== '--formats');
+  for (const f of list) {
+    console.log(`\n=== format ${f}`);
+    const r = spawnSync(process.execPath, [process.argv[1], argv[0], ...rest, '--format', f], { stdio: 'inherit' });
+    if (r.status !== 0) process.exit(r.status || 1);
+  }
+  process.exit(0);
+}
 const workers = parseInt(opt('workers', '4'), 10);
 const onlyAudio = flag('only-audio');
-const url = pathToFileURL(path.join(ROOT, 'index.html')).href + '?export=1';
+const FORMAT = opt('format', null), BLUR = Math.max(1, parseInt(opt('blur', '1'), 10));
+const url = pathToFileURL(path.join(ROOT, 'index.html')).href + '?export=1' + (FORMAT ? `&format=${encodeURIComponent(FORMAT)}` : '');
+const PIECE_JSON = fs.existsSync(path.join(ROOT, 'piece.json')) ? JSON.parse(fs.readFileSync(path.join(ROOT, 'piece.json'), 'utf8')) : {};
 
-fs.mkdirSync(FRAMES, { recursive: true });
 fs.mkdirSync(RENDERS, { recursive: true });
 const BASE_ARGS = ['--autoplay-policy=no-user-gesture-required'];
 // WebGL pieces (TIMELINE.gpu or --gpu) render on the real GPU (tools/gpu.mjs: ANGLE/D3D11 on Windows); without one Chromium falls back to software
@@ -51,7 +68,7 @@ await probe.goto(url);
 await probe.waitForFunction(() => window.TIMELINE);
 const meta = await probe.evaluate(() => {
   const T = window.TIMELINE;
-  return { frames: T.frames, fps: T.fps, width: T.width || 1080, height: T.height || 1080, narration: T.narration || null, gpu: !!T.gpu };
+  return { frames: T.frames, fps: T.fps, width: T.width || 1080, height: T.height || 1080, narration: T.narration || null, gpu: !!T.gpu, aspect: T.aspect || null };
 });
 await probe.close();
 if (meta.gpu || flag('gpu')) {
@@ -74,6 +91,11 @@ const first = await openPage();
 const from = parseInt(opt('from', '0'), 10);
 const to = Math.min(parseInt(opt('to', String(meta.frames - 1)), 10), meta.frames - 1);
 console.log(`index.html: ${meta.width}x${meta.height}, ${meta.frames} frames @ ${meta.fps}fps (${(meta.frames / meta.fps).toFixed(4)}s)`);
+// another format than the main one: its own frames folder and renders/<name>-<w>x<h>.mp4
+const SUFFIX = FORMAT && FORMAT !== (PIECE_JSON.formats || [])[0] ? `-${meta.width}x${meta.height}` : '';   // the main format (piece.json "formats"[0]) keeps final.mp4
+const FR = SUFFIX ? FRAMES + SUFFIX : FRAMES;
+fs.mkdirSync(FR, { recursive: true });
+if (BLUR > 1 && !(await first.evaluate(() => typeof STYLE === 'object' && STYLE.ones))) console.warn(`warning: --blur ${BLUR} does nothing for a style on 2s (STYLE.ones is false): every sub-frame is the same drawing`);
 
 if (!onlyAudio) {
   const pages = [first];
@@ -83,11 +105,16 @@ if (!onlyAudio) {
   await Promise.all(pages.map(async (page) => {
     while (queue.length) {
       const i = queue.shift();
-      const b64 = await page.evaluate((fi) => {
-        window.renderFrame(fi / window.TIMELINE.fps);
-        return document.getElementById('c').toDataURL('image/png').split(',')[1];
-      }, i);
-      fs.writeFileSync(path.join(FRAMES, `f${String(i).padStart(4, '0')}.png`), Buffer.from(b64, 'base64'));
+      const b64 = await page.evaluate(([fi, n]) => {
+        const cv = document.getElementById('c'), fps = window.TIMELINE.fps;
+        if (n <= 1) { window.renderFrame(fi / fps); return cv.toDataURL('image/png').split(',')[1]; }
+        // motion blur: n sub-frames across half the frame interval (a 180-degree shutter), averaged
+        const g = cv.getContext('2d'), acc = new Float32Array(cv.width * cv.height * 4);
+        for (let j = 0; j < n; j++) { window.renderFrame((fi + (j / n) * 0.5) / fps, cv, true); const d = g.getImageData(0, 0, cv.width, cv.height).data; for (let k = 0; k < d.length; k++) acc[k] += d[k]; }
+        const out = g.createImageData(cv.width, cv.height); for (let k = 0; k < acc.length; k++) out.data[k] = Math.round(acc[k] / n);
+        g.putImageData(out, 0, 0); return cv.toDataURL('image/png').split(',')[1];
+      }, [i, BLUR]);
+      fs.writeFileSync(path.join(FR, `f${String(i).padStart(4, '0')}.png`), Buffer.from(b64, 'base64'));
       if (++done % 24 === 0) console.log(`  ${done}/${to - from + 1} frames  ${((Date.now() - t0) / done).toFixed(0)}ms/frame`);
     }
   }));
@@ -106,17 +133,30 @@ if (!flag('no-audio')) {
     for (const [name, data] of Object.entries(stems)) fs.writeFileSync(path.join(RENDERS, `stem-${name}.wav`), Buffer.from(data, 'base64'));
     console.log(`stems written: ${Object.keys(stems).map((n) => `stem-${n}.wav`).join(', ')} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   }
+  // the user's own track replaces the synthesized music: track window + the score's sfx stem, loudness-normalised
+  const M = PIECE_JSON.music;
+  if (M && M.file) {
+    const track = path.resolve(ROOT, M.file), dur = meta.frames / meta.fps, fade = M.fade ?? 0.5, sfx = path.join(RENDERS, 'stem-sfx.wav');
+    if (!fs.existsSync(track)) { console.error('music file not found:', track); process.exit(1); }
+    const chain = `[0:a]aresample=48000,aformat=channel_layouts=stereo,volume=${M.gain ?? 0}dB,afade=t=out:st=${Math.max(0, dur - fade)}:d=${fade}`;
+    const inputs = ['-ss', String(M.start ?? 0), '-t', String(dur), '-i', track, ...(fs.existsSync(sfx) ? ['-i', sfx] : [])];
+    const graph = fs.existsSync(sfx) ? `${chain}[m];[1:a]aresample=48000,aformat=channel_layouts=stereo[s];[m][s]amix=inputs=2:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11[o]` : `${chain},loudnorm=I=-14:TP=-1.5:LRA=11[o]`;
+    let r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...inputs, '-filter_complex', graph, '-map', '[o]', '-ar', '48000', '-t', String(dur), wavPath], { stdio: 'inherit' });
+    if (r.status !== 0) { console.error('music mix failed'); process.exit(1); }
+    r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-ss', String(M.start ?? 0), '-t', String(dur), '-i', track, '-filter_complex', `${chain}[o]`, '-map', '[o]', path.join(RENDERS, 'stem-music.wav')], { stdio: 'inherit' });
+    console.log(`music: ${path.basename(track)} from ${M.start ?? 0}s, ${dur.toFixed(2)}s${fs.existsSync(sfx) ? ' + the score\'s sfx stem' : ''}, loudness -14 LUFS -> audio.wav`);
+  }
 }
 await browser.close();
 
 const full = from === 0 && to === meta.frames - 1;
 if (!flag('no-mux') && !onlyAudio && full) {
-  const out = path.join(RENDERS, opt('out', 'final.mp4'));
+  const out = path.join(RENDERS, opt('out', `final${SUFFIX}.mp4`));
   const args = ['-y', '-hide_banner', '-loglevel', 'error',
-    '-framerate', String(meta.fps), '-i', path.join(FRAMES, 'f%04d.png'),
-    '-i', wavPath, '-map', '0:v:0', '-map', '1:a:0',
+    '-framerate', String(meta.fps), '-i', path.join(FR, 'f%04d.png'),
+    ...(fs.existsSync(wavPath) && !flag('no-audio') ? ['-i', wavPath, '-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-b:a', '192k'] : ['-map', '0:v:0']),
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '14', '-pix_fmt', 'yuv420p', '-r', String(meta.fps),
-    '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
+    '-movflags', '+faststart', out];
   const r = spawnSync('ffmpeg', args, { stdio: 'inherit' });
   if (r.status !== 0) { console.error('ffmpeg failed'); process.exit(1); }
   console.log('wrote', out);
@@ -137,18 +177,18 @@ if (!flag('no-mux') && !onlyAudio && full) {
   }
 }
 // --only-audio: swap the new score into the existing master without re-rendering frames
-if (onlyAudio && !flag('no-mux') && fs.existsSync(path.join(RENDERS, 'final.mp4'))) {
+if (onlyAudio && !flag('no-mux') && fs.existsSync(path.join(RENDERS, `final${SUFFIX}.mp4`))) {
   const tmp = path.join(RENDERS, 'final-remux.mp4');
-  const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', path.join(RENDERS, 'final.mp4'), '-i', wavPath,
+  const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', path.join(RENDERS, `final${SUFFIX}.mp4`), '-i', wavPath,
     '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', tmp], { stdio: 'inherit' });
   if (r.status !== 0) { console.error('remux failed'); process.exit(1); }
-  fs.renameSync(tmp, path.join(RENDERS, 'final.mp4'));
-  console.log('remuxed the new audio into', path.join(RENDERS, 'final.mp4'));
+  fs.renameSync(tmp, path.join(RENDERS, `final${SUFFIX}.mp4`));
+  console.log('remuxed the new audio into', path.join(RENDERS, `final${SUFFIX}.mp4`));
 }
 // --share: a smaller encode for sending to a phone (CRF 24)
-if (flag('share') && fs.existsSync(path.join(RENDERS, 'final.mp4'))) {
-  const out = path.join(RENDERS, 'share.mp4');
-  const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', path.join(RENDERS, 'final.mp4'), '-c:v', 'libx264', '-crf', '24', '-preset', 'slow',
+if (flag('share') && fs.existsSync(path.join(RENDERS, `final${SUFFIX}.mp4`))) {
+  const out = path.join(RENDERS, `share${SUFFIX}.mp4`);
+  const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', path.join(RENDERS, `final${SUFFIX}.mp4`), '-c:v', 'libx264', '-crf', '24', '-preset', 'slow',
     '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out], { stdio: 'inherit' });
   if (r.status !== 0) { console.error('share encode failed'); process.exit(1); }
   console.log('wrote', out);

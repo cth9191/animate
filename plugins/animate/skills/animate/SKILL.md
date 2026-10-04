@@ -17,7 +17,7 @@ All paths below are relative to this skill's base directory. Pieces live in the 
 1. **No animating before the storyboard is approved.** The check-ins exist because a wrong story or look costs a full build.
 2. **Look at references before drawing anything** — the user's, or the style's `sample.png` and demo. Then check every key frame against [grammar/FRAME.md](grammar/FRAME.md) and the style's own checklist in its `STYLE.md`.
 3. **Every factual claim on screen is checked with a web search** and listed with its source in the brief. Never claim "first" without a source.
-4. **Single file, all code:** one `index.html`, no images/audio/video files, no `data:` URIs, no URLs, no web fonts. `tools/build.mjs` enforces it.
+4. **Single file, all code:** one `index.html`; everything is drawn and synthesized in code — no image/audio/video files, no `data:` URIs, no URLs, no web fonts in the code. `tools/build.mjs` enforces it. Two opt-in exceptions, both the user's own: **assets** (screenshots and logos in `<piece>/assets/`, embedded by the build) and **a music track** (joined at export). See Assets and Music below.
 5. **Deterministic:** seeded randomness only (`RNG(...)`), the boil index `B` for per-step variation. Never `Math.random()` or wall-clock time.
 6. **Reference media stays local.** Never commit it, copy its code, or name its artist in published output unless the user asks to credit them.
 7. **"Done" is measured:** `tools/review.mjs` passes and you have looked at the contact sheets. Report the numbers, not "looks good".
@@ -52,7 +52,7 @@ Draw every beat in the approved look. Fill `TIMELINE.board` with one key time pe
 3. `node tools/build.mjs pieces/<name>` → `index.html` (the style's kit is pulled in from `piece.json` `"style"`).
 4. Test tiles while building: `node tools/tile.mjs pieces/<name> tile.png <frames...>` — look at them; tile across every morph and cut.
 5. Score in `src/score.js` (see craft.md → Sound).
-6. `node tools/export.mjs pieces/<name> --share` → frames, `audio.wav`, stems, `renders/final.mp4`, `renders/share.mp4`. Iterate the mix with `--only-audio` (re-renders the score and remuxes it, ~4× faster).
+6. `node tools/export.mjs pieces/<name> --share` → frames, `audio.wav`, stems, `renders/final.mp4`, `renders/share.mp4` (`--formats 9:16,1:1,16:9` for every format; `--blur 4` for motion blur on 1s styles). Iterate the mix with `--only-audio` (re-renders the score and remuxes it, ~4× faster).
 7. `node tools/review.mjs pieces/<name>` → contact sheets per shot, cut grid, morph grid, story arc, anchor, **text** (cut off / overlapping / under the phone UI) and **sound** (the loudest moment, the silence before it, LUFS). Fix until it passes, view the sheets, write a per-shot PASS table in `LOG.md`. Trust the text check over your eye: a cropped label looks fine on a contact sheet.
 
 ### 5. Deliver
@@ -60,6 +60,34 @@ Send `renders/share.mp4`. Say in a few lines: what it is, the checks' numbers, w
 
 ### 6. Learn
 After each run append to the piece's `LOG.md`. If something new went wrong or worked, propose a one-line rule for [craft.md](craft.md), the style's `STYLE.md` or a kit change, and add it when the user agrees.
+
+## Music: the user's own track (optional)
+
+Ask at intake (question 6). Without a track the score is composed in code on a 120 BPM grid. With one:
+1. Put it in the piece: `pieces/<name>/audio/track.wav` (WAV, MP3 or M4A), and in `piece.json`: `"music": { "file": "audio/track.wav", "start": 12.0, "gain": 0, "fade": 0.5 }` (`start` = where in the song the piece begins).
+2. `node tools/beats.mjs pieces/<name>/audio/track.wav pieces/<name> --start 12 --dur <piece length>` → `beats.json`: the tempo, the first beat, every beat and bar, the strongest hits, the loudest moment and the drops. Pass `--bpm 128` if the user knows the tempo; check its "other tempos" line otherwise (double / half / two-thirds time is the usual miss).
+3. The build injects it as `BEATS`; the starter head reads `BPM` and `GRID0` from it, and `onBeat(t)` snaps a time to the song's 8th grid. Put cuts, morphs and cues on `onBeat(...)`. **The song decides the arc:** put the turn on a drop (`BEATS.quiet`) and the payoff on its loudest hit (`BEATS.loudest`, `BEATS.hits`), not where a composed score would have put them.
+4. The score (`src/score.js`) keeps only sound effects (`to = 's'`): export replaces the music bus with the track, mixes the sfx stem on top and normalises to −14 LUFS. Review's grid uses `TIMELINE.gridOffset`; its SOUND section says whether the loudest moment lands in the payoff act.
+5. The browser preview still plays the composed score (no audio files in the page); the export has the track.
+
+## Assets: real screenshots and logos (optional)
+
+Ask at intake (question 7) when the subject is a product. Then:
+- `node tools/capture.mjs <url> pieces/<name>/assets/home.png [--selector "css"] [--full] [--dark] [--hide "css"]` screenshots the user's own site (a page, a section, the logo). Ask before capturing anything they don't own. Logo files they give you go in `assets/` too (PNG, SVG, JPG, WEBP).
+- `tools/build.mjs` embeds everything in `assets/` into `index.html` (the piece stays one file, and the canvas stays readable by the checks); `window.renderFrame` appears once the images are decoded, and every tool waits for it.
+- Draw them with `drawAsset('home.png', x, y, w, h, { fit: 'cover' | 'contain', r })` inside the style's own framing (a torn-paper photo, an inked frame, a printed card) so they belong to the look. `asset(name)` returns the image.
+- **Real product UI only:** animate the real screens (crop, push in, reveal, point at them with the hero); never draw a fake screen as if it were the product. Sample brand colours from the screenshots.
+
+## Formats: one piece, several shapes (optional)
+
+Ask at intake (question 2, multi-select). List them in `piece.json` `"formats": ["9:16", "1:1", "16:9"]` (the first is the main one). The starter's head reads `?format=` and sets `W`, `H`, `SAFE` and `CX`; scenes place things with `LX(fraction)`, `LY(fraction)` and size them with `UNIT`, and choose a different arrangement with `PORTRAIT` / `WIDE` where a shape needs it (a column of three on 9:16, a row of three on 16:9). Never crop a 9:16 render to 16:9.
+- `node tools/export.mjs pieces/<name> --formats 9:16,1:1,16:9 --share` → `renders/final.mp4` (main) and `final-<w>x<h>.mp4` for the others.
+- Review each: `node tools/review.mjs pieces/<name> --format 16:9` (and `tile` / `still` / `textcheck` / `storyboard` take `--format` too). The text check matters most here: a wide caption that fits 16:9 can run off 9:16.
+
+## Motion: springs and blur
+
+- **Springs** (`kit/core.js`): `springMove(t0, a, b, SPRING.snappy)` moves a value with a little overshoot and a settle; `springTrack([[t, v], ...])` follows a value through many targets without a jump. Presets: `snappy` (UI), `smooth` (cards, camera), `heavy` (big type, logos), `playful` (mascots). Closed-form, so frames stay deterministic. On-2s styles step them every 2 frames, as they should.
+- **Motion blur:** `export.mjs --blur 4` averages 4 sub-frames per frame — only for styles on 1s (`STYLE.ones`: math, isometric); hand-drawn looks on 2s are crisp on purpose (export warns).
 
 ## Parallel agents (long pieces)
 
@@ -85,7 +113,7 @@ A 45–60s piece has 10–15 scenes; split the drawing across agents once the st
 | `kit/board.js` | the storyboard renderer | steps 2–3 |
 | `kit/score-*.js` | synth (pluck, pad, drone, bass, sub, noiseHit, sweep, riser, chime, blip), loudness stage | scoring |
 | [templates/](templates/) | `piece/` (an 8s cut-paper morph), `beat-cut/` (a 6s hard-cut piece with a 16th rush), `style/` (a blank style kit for new looks) | step 2 |
-| `tools/` | build, tile, still, storyboard, export, review, textcheck, compare (reference vs frame), gallery, framehash (pixel-identity check); `measure/` for references (`refs.mjs` for stills, `shotlog.py` for video) | throughout |
+| `tools/` | build, tile, still, storyboard, export, review, textcheck, compare (reference vs frame), gallery, framehash (pixel-identity check), beats (a supplied track's beat map), capture (screenshots of the user's site); `measure/` for references (`refs.mjs` for stills, `shotlog.py` for video) | throughout |
 | [examples/history-of-ai/](examples/history-of-ai/) | a full 60s worked example (cut paper) | when unsure how something fits |
 
 ## Honesty about what's proven

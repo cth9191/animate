@@ -1,8 +1,8 @@
 {
   "name": "animate",
   "displayName": "Animate",
-  "description": "Make short procedural animations in any style (explainers, histories, little stories) as single-file canvas videos with a synthesized score. Ships with seven styles and makes new ones from your references; intake, story / look / storyboard check-ins, then a measured build to MP4.",
-  "version": "0.2.3",
+  "description": "Make short procedural animations in any style (explainers, histories, product reels, little stories) as single-file canvas videos. Seven styles built in or a new one from your references; your own music track (beat-mapped) or a composed score; real screenshots of your product; every format from one piece. Intake, story / look / storyboard check-ins, then a measured build to MP4.",
+  "version": "0.3.0",
   "author": {
     "name": "cth9191"
   },

@@ -74,12 +74,13 @@ function shotAtFrame(fr) {
   return TIMELINE.shots[TIMELINE.shots.length - 1];
 }
 const eraAt = (t) => ERA_LIST.findIndex(([a, b]) => t >= a - 1e-6 && t < b - 1e-6);
-function renderFrame(t, canvas) {
+// renderFrame(t, canvas, sub): sub = true draws the exact time t between frames (motion blur sub-frames, styles on 1s)
+function renderFrame(t, canvas, sub) {
   const cv = canvas || document.getElementById('c');
   ctx = cv.getContext('2d');
-  F = ((Math.round(t * FPS) % NFRAMES) + NFRAMES) % NFRAMES;
+  F = ((Math.floor(sub ? t * FPS + 1e-6 : Math.round(t * FPS)) % NFRAMES) + NFRAMES) % NFRAMES;
   B = Math.floor(F / 2);
-  TT = (STYLE.ones ? F : B * 2) / FPS;
+  TT = (STYLE.ones ? (sub ? F + (t * FPS - Math.floor(t * FPS + 1e-6)) : F) : B * 2) / FPS;
   // the era is picked by the real frame, so a cut on an odd frame (a 16th at 24fps) lands on that frame;
   // on its first frame the new era is drawn at its own start time (motion stays on 2s inside it)
   const s = shotAtFrame(F), e = Math.max(0, eraAt(F / FPS));

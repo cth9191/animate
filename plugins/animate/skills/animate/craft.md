@@ -13,6 +13,8 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 - **A history's facts can supply the arc** — and must be true. Web-check every date and number; say "a", not "the first", unless sourced.
 
 ## Frame (see grammar/FRAME.md and the style's own checklist in its STYLE.md)
+- **Banned defaults** (they read as generic AI video): a centred title on a gradient; everything fading in; labels or frame borders in the corners; glows on UI chrome; generic particle bursts; a logo sting as the only ending. Every frame should look like *this* style and *this* subject.
+- **Something new every 2–4 seconds:** a move, a reveal, a cut, a reaction. `review.mjs` → DEAD BEATS flags longer still stretches (silence acts are exempt; set `review.deadMax` to change the limit). Read `review/phone.jpg` — one frame a second at 360px wide — before calling a piece done.
 - **One constant the eye can hold** in every frame: a hero with a face in character styles, the object or the axes in diagram styles.
 - **The medium shows** at phone size: torn edges in cut paper, hatching in ink, dots in riso, graphite in sketchbook, crisp pixels in pixel art.
 - **Small life even in held frames** (steam, a blink, a blinking LED, a cursor); character styles want 3+ details of background life per frame.
@@ -31,6 +33,7 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 - **Morph on the style's blank sheet** (`STYLE.paper`), not a blend of two wall colours (mud).
 
 ## Motion
+- **Springs over easing curves** for anything with mass: `springMove` / `springTrack` (kit/core.js). A tiny overshoot on UI, none on big type. A value with many targets gets one spring per change (`springTrack`), never a restarted ease.
 - **Everything moves on 2s:** time is `TT = B * 2 / FPS`; the boil, the camera and every move share the boil index `B = floor(F / 2)`.
 - **Event helpers:** `ev(t, d)` (0..1 progress), `popS(t)` (back-eased pop-in), `handText(..., { frac })` / `ink(..., { frac })` write-ons, `monoText(..., { count })` typing. Schedule actions on cue times listed in `TIMELINE.cues`.
 - **Idle life is free:** the spark bobs, blinks and sways on its own; keep heroes alive in held shots.
@@ -49,6 +52,7 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 - **Act roles** (`TIMELINE.acts[].role`, read by `review.mjs` → STORY ARC): `build`, `journey`, `peak` (the busiest), `silence` (the drop before the turn), `gift` (the payoff: the loudest), `goodbye` (the decay). Leave a role out when the piece has no such act.
 
 ## Sound
+- **With the user's track, the song is the arc.** Find its drop and its biggest hit in `beats.json` and put the turn and the payoff there; cut on its beats (`onBeat`), keep the score to sound effects.
 - **The score improves with the story** (thin early, fullest at the peak); motifs carry characters (the spark = a rising fifth).
 - **A loudness stage** (RMS-normalise to −17 dBFS, look-ahead limiter at −1 dBFS) is in `kit/score-tail.js`; stems share the mix gain so they sum back to it.
 - **Under that stage, balance by removing energy, not adding it** — every relative boost is partly undone.

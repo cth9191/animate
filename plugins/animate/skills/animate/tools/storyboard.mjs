@@ -7,14 +7,15 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
 const { chromium } = (() => { try { return require('playwright'); } catch { return require(path.join(execSync('npm root -g').toString().trim(), 'playwright')); } })();
-const args = process.argv.slice(2), src = args.shift();
+const args = process.argv.slice(2), fmtI = args.indexOf('--format'), format = fmtI >= 0 ? args.splice(fmtI, 2)[1] : null, src = args.shift();
 if (!src) { console.error('usage: node tools/storyboard.mjs <piece dir | index.html> [out.png] [panel numbers...]'); process.exit(2); }
 const file = src.endsWith('.html') ? src : path.join(src, 'index.html');
 const out = args[0] && args[0].endsWith('.png') ? args.shift() : path.join(path.dirname(file), 'storyboard.png');
 const panels = args;
 const browser = await chromium.launch(); const page = await browser.newPage();
 page.on('pageerror', (e) => console.error('pageerror:', e.message));
-await page.goto(pathToFileURL(path.resolve(file)).href + '?export=1');
+await page.goto(pathToFileURL(path.resolve(file)).href + '?export=1' + (format ? `&format=${encodeURIComponent(format)}` : ''));
+await page.waitForFunction(() => window.TIMELINE && window.renderFrame);
 await page.evaluate(() => document.fonts.ready);
 const t0 = Date.now();
 const url = await page.evaluate(() => window.renderBoard().toDataURL('image/png'));
