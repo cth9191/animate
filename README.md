@@ -4,7 +4,7 @@ A Claude Code skill that makes short animated videos entirely in code: one `<can
 
 ![the built-in styles](docs/styles.png)
 
-*The built-in styles, each a frame from its demo piece: cut paper, crosshatch ink, riso print, sketchbook, math, pixel, isometric.*
+*The built-in styles, each a frame from its demo piece: cut paper, crosshatch ink, riso print, sketchbook, math, pixel, isometric — and the eighth slot: any other look, made from your references.*
 
 ## How it works
 

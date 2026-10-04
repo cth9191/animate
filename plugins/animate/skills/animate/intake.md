@@ -23,7 +23,7 @@ Ask only what you can't infer from the request. AskUserQuestion takes up to 4 qu
 4. **The look?** *(skip the gallery when the request already names a style or brings references — go to new-style.md or the named style)* Build the gallery (`node tools/gallery.mjs <out.png> [<project>/styles]`), show it, then ask:
    - One of these: cut paper / crosshatch ink / riso print / sketchbook / math / pixel / isometric *(recommend the one that fits the subject: cut paper for histories and stories, crosshatch for Claude Code explainers, math for anything with equations or graphs, pixel for computing history, isometric for products, devices and infrastructure, riso or sketchbook for a softer editorial feel)*
    - A style they've made before (any `styles/<name>/` in their project)
-   - My own references — links or files (videos, stills, a web page): follow [new-style.md](new-style.md); keep the media local and uncommitted
+   - My own references (the gallery's last tile, "custom") — links or files (videos, stills, a web page): follow [new-style.md](new-style.md); keep the media local and uncommitted
    - Surprise me
 
 5. **A hero?** *(ask only if the format wants one)*
