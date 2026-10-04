@@ -1,8 +1,8 @@
 # Making a new style from references
 
-Use this when the user names or shows a look that no style in [styles/](styles/README.md) covers. The output is a reusable style folder, made the same way the shipped ones were. Budget: a measure pass, 1–2 matched frames, one check-in, then save.
+Use this when the user names or shows a look that no style in [styles/](styles/README.md) covers. The output is a reusable style folder, made the same way the shipped ones were. Budget: a measure pass, the piece's 2–4 style frames matched against the references, **one** check-in (SKILL.md step 2), then save after the piece.
 
-**Reference media stays local.** Screenshots, downloaded videos and frame sheets go in a gitignored folder (e.g. `references/<look>/` in the user's project — add it to `.gitignore` first). Never commit them, never copy their code, and don't name the artist in what you publish unless the user asks you to credit them. A licence that allows reuse (MIT etc.) still means: credit it if you reuse code; studying the look needs no copying at all.
+**Reference media stays local.** Screenshots, downloaded videos and frame sheets go in a gitignored folder (e.g. `references/<look>/` in the user's project — add it to `.gitignore` first). That includes anything derived from them — trimmed copies, zoom crops, compare sheets: **anything with reference pixels in it goes in `references/<look>/`**. Never commit them, never copy their code, and don't name the artist in what you publish unless the user asks you to credit them. A licence that allows reuse (MIT etc.) still means: credit it if you reuse code; studying the look needs no copying at all.
 
 **Paths.** The tools live in this skill; the style, its demo and the references live in the user's project. Run the commands below with `SKILL=<this skill's base directory>` and `P=<the user's project>` as absolute paths (on Windows use the project's own scratch folder, not `/tmp`):
 `node $SKILL/tools/compare.mjs $P/references/<look>/a.png $P/styles/<name>/demo 1.5 $P/references/<look>/cmp-1.png`.
@@ -17,7 +17,7 @@ Use this when the user names or shows a look that no style in [styles/](styles/R
 
 | what | how |
 |---|---|
-| **Palette** | exact values from the source (computed SVG styles, CSS) when there is one; otherwise `compare.mjs` prints the reference's 6 most common colours (quantised to steps of 16) — good for grounds and big fills, unreliable for thin lines (anti-aliasing lightens them). For a flat area, crop it with `--crop` and read the top colour. Note what each colour *means* (ground, line, accent, the hero). |
+| **Palette** | `node $SKILL/tools/measure/refs.mjs $P/references/<look>/` — no piece needed: it trims screenshot borders (writes `<name>.trim.png`), prints each picture's size and aspect, its most common colours, and `--points x,y;x,y` samples flat areas exactly. Exact values from the source (computed SVG styles, CSS) beat it when there is one; thin lines read lighter in screenshots. Note what each colour *means* (ground, line, accent, the hero). |
 | **Line** | weight relative to the **drawing's** size, then scaled to the size the drawing will have in our frame: a 0.9px line on a 400px-wide figure, drawn 800px wide at 1080, is ~1.8px. Constant or tapered; does it boil (wobble on 2s) or stay rigid; caps and joins. |
 | **Fill and texture** | flat, gradient, halftone, hatch, grain, paper; shadows (none, drop, cast, hatched). |
 | **Geometry** | perspective (flat, isometric 2:1, true 3D), corner rounding, how text is set (font class, size as % of height). |
@@ -30,18 +30,18 @@ Use this when the user names or shows a look that no style in [styles/](styles/R
 
 1. Make `styles/<name>/` in the user's project:
    - `kit.js`: start from the closest shipped style's kit, **including its `const STYLE = {...}` block** (build.mjs refuses a kit without one; refine the hooks in step 5). Keep `kit/core.js` underneath and don't redeclare its names (see styles/README.md → Names a kit must not reuse).
-   - `demo/`: copy `styles/crosshatch/demo/`, set `"style": "<name>"`. For the first frames you only need **one era**: set `ERA_LIST` to a single scene, `BRIDGES = []`, and add the second era and the morph in step 5.
-2. Draw one or two frames that re-create the *kind* of image in the references — the same medium, proportions and palette — with your own subject, not a copy of theirs.
-3. Compare side by side with `compare.mjs` (`--crop x,y,w,h` picks the region of the reference; crop at 9:16 around one figure). Check, in this order: proportions on the 10% grid (subject size, margins, line weight relative to the subject), the palette numbers, the texture, the type. A landscape reference won't match 9:16 composition exactly — compare the drawing, and decide the composition from the format. Fix and repeat until the differences are deliberate. Write what still differs in STYLE.md ("not matched").
+   - The frames you match are **the piece's own style frames** (SKILL.md step 2): start the piece from `styles/crosshatch/demo/` (`piece.json` + `src/`), set `"style": "<name>"`, and draw its 2–4 most different beats. No separate demo is needed before the check-in.
+2. The frames re-create the *kind* of image in the references — the same medium, proportions and palette — with your own subject, not a copy of theirs.
+3. Compare side by side with `compare.mjs` (`--auto-trim` drops screenshot borders, `--crop x,y,w,h` picks the region of the reference — crop at 9:16 around one figure — and `--crop-ours x,y,w,h` the matching region of our frame, so both palettes describe the same kind of area). Check, in this order: proportions on the 10% grid (subject size, margins, line weight relative to the subject), the palette numbers, the texture, the type. A landscape reference won't match 9:16 composition exactly — compare the drawing, and decide the composition from the format. Fix and repeat until the differences are deliberate. Write what still differs in STYLE.md ("not matched").
 
 ## 4. The check-in
 
-Show the user the comparison sheets and the frames. Ask with options: **thumbs up / closer to the reference (say where) / push it further from the reference.** Don't save the style before a thumbs up.
+This is the piece's look check (SKILL.md step 2) — one check-in, not two. Show the compare sheets and the piece's frames together. Ask with options: **thumbs up / closer to the reference (say where) / push it further from the reference.** Don't save the style before a thumbs up.
 
-## 5. Save it
+## 5. Save it (after the piece is approved and built)
 
 1. Finish `kit.js` with the `STYLE` hooks (backdrop, window, blob, hero, captions, post, `ones`) — see [styles/README.md](styles/README.md) for the contract and the renderer's quirks (hex colours, `rgb()` mid-morph, the camera transform).
-2. The demo: 4–8s, two eras joined by one shape morph, a hero, a caption, background life. Pick bridge shapes of similar proportions (a dot morphing into a long thin bar pinches into a bowtie). `node $SKILL/tools/build.mjs $P/styles/<name>/demo`, then `PIECE=$P/styles/<name>/demo node $SKILL/tools/tile.mjs tile.png ...` must print `deterministic: true`.
-3. `node $SKILL/tools/still.mjs $P/styles/<name>/demo <t> $P/styles/<name>/sample.png --scale 0.5`.
+2. The demo: the finished piece is the style's first proof. If the user wants the style shared or reused, add a 4–8s `demo/` (two eras, one shape morph, a hero, a caption, background life; bridge shapes of similar proportions — a dot into a long thin bar pinches into a bowtie). `node $SKILL/tools/build.mjs $P/styles/<name>/demo`, then `node $SKILL/tools/tile.mjs $P/styles/<name>/demo tile.png ...` must print `deterministic: true`.
+3. `node $SKILL/tools/still.mjs <the piece or the demo> <t> $P/styles/<name>/sample.png --scale 0.5`.
 4. `STYLE.md`: what the look is, the measured numbers, motion habits, **a frame checklist specific to this look** (on top of the universal [grammar/FRAME.md](grammar/FRAME.md)), the kit API, do/don't, not matched, proven on.
 5. Pieces use it with `"style": "<name>"`; `build.mjs` finds `styles/<name>/` beside or above the piece. Variants (a dark ground, a second palette) are a small extra part listed in the piece's `piece.json` `"build"` before the style, e.g. `src/options.js` with `const ISO_DARK = true;`, which the kit reads with `typeof ISO_DARK !== 'undefined'`. If the user wants the style in the skill for everyone, copy it into the skill's `styles/` (with its sample, without any reference media).

@@ -15,7 +15,7 @@ function sceneDesk() {
   // background life: a paper clip, crumbs, a sticky note
   ink([[120, 420], [120, 330], [150, 310], [180, 330], [180, 440], [150, 460], [140, 450], [140, 350]], { w: 4, color: '#8a8590', key: 'clip' });
   for (let i = 0; i < 9; i++) { const R = RNG('crumb', i); ctx.fillStyle = C.woodD; ctx.beginPath(); ctx.arc(R.r(80, 900), R.r(1250, 1480), R.r(3, 7), 0, TAU); ctx.fill(); }
-  ctx.save(); ctx.translate(800, 1120); ctx.rotate(0.08);
+  ctx.save(); ctx.translate(690, 1120); ctx.rotate(0.08);
   paint(box(0, 0, 220, 200), { fill: C.yellowL, key: 'sticky', w: 2.6, tex: [{ k: 'pencil', c: C.yellow, al: 0.5, per: 70 }] });
   handText('ship it', 30, 110, 54, C.ink, { key: 'stk' });
   ctx.restore();

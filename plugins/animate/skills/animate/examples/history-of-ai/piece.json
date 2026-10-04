@@ -17,6 +17,13 @@
       "bottom": 420,
       "right": 140
     },
-    "refs": {}
+    "refs": {},
+    "textIgnore": [
+      [
+        46.0,
+        51.0,
+        "ChatGPT: a storm of chat bubbles flies past the edges and over the date tag on purpose"
+      ]
+    ]
   }
 }

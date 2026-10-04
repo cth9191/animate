@@ -24,6 +24,7 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 ## Transitions
 - **Match the transition to the format.** Chronologies transition *from the scene*: a shape morph (sun → eye) or draw-off/draw-on. Character and catalogue pieces cut hard on the beat.
 - **Keep at most one hard cut in a morph-joined piece** — the slam on the payoff.
+- **Budget morphs in short pieces.** Each bridge costs 1.2s by default (0.4s of it blank paper): under 30s use 3 morphs or fewer, or shorten them with `{ tc, d: 0.4, ... }` (0.8s). Bridge objects should be ≥ 200px at the boundary, or the world shrinks into a tiny window early.
 - **Shape-morph bridge (kit/morph.js):** the old world closes in on one object through a window shaped like it (the style draws the window: a torn hole, an inked iris, a printed circle), the object blends into its counterpart on blank paper, the new world opens out of the counterpart. Write one bridge per beat at the storyboard stage and build those bridges.
 - **The bridge object must be in frame at the boundary** — pull push-ins back first.
 - **Hero-to-hero bridges draw the hero itself** (blended position/size), not two outlines.
@@ -36,6 +37,7 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 - **Cameras put a world point on a screen point** (`camOf({ z, p, to })`, `push()`), never "zoom about a point" — that drops the subject under the caption.
 - **Pin the hero in the fastest stretch** by centring zoom bumps on it; `review.mjs` checks the anchor.
 - **Hard cuts land on finished frames:** what defines the new shot is fully drawn on its first frame; write-ons start a few frames early.
+- **What existed before the step is on screen from frame 0.** Only the step's own effects animate in (the files were staged before `git commit`; they don't pop in during it).
 - **Captions hold:** each on screen ≥ 1.25s and ≤ 3.5 words/s; pop the year tag, write the caption on just after.
 
 ## Timing
@@ -64,6 +66,7 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 
 ## Review
 - **Three layers, every time:** test tiles while building (look at them), `review.mjs` numbers, and the contact sheets per shot with a written PASS table.
+- **Don't trust your eye for text.** A fresh run passed a shot whose commit sheet was cut off at the frame edge with a tag over its hash; `review.mjs` → TEXT finds those. Deliberate crowding goes in `piece.json` `review.textIgnore` with a reason.
 - **Name the weakest shot and what would fix it** in the log — it's the next run's to-do list.
 - **Iterate the mix with `export.mjs --only-audio`** (re-renders the score and remuxes the master).
 

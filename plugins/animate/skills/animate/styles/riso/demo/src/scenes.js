@@ -175,7 +175,7 @@ function sceneMarket() {
   });
   // the hanging price sign: its own small layer, swinging (life)
   const sa = Math.sin(TT * 3.2) * 0.07;
-  printed(PITCH.world, { T: { s: 1, x: 800, y: 430, rot: sa }, shapes: true, box: [-150, -20, 150, 230] }, () => {
+  printed(PITCH.world, { T: { s: 1, x: 720, y: 430, rot: sa }, shapes: true, box: [-150, -20, 150, 230] }, () => {
     line([[-80, -10], [-90, 70]], MIX.dark, { w: 4, amt: 0.4, key: 'str1', knock: true }); line([[80, -10], [90, 70]], MIX.dark, { w: 4, amt: 0.4, key: 'str2', knock: true });
     fill(hand(boxPts(-115, 66, 230, 130), 'sign', 1.2), MIX.dark);
     specks(-105, 75, 105, 185, 40, 'sign');

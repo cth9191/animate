@@ -52,7 +52,7 @@ Every piece is one choice from each column. Read a format as a proven combinatio
 ### F2. Chronology, morph chain
 - **Engine:** chronology with a visible clock — a year tag or counter.
 - **Stage:** either one fixed frame (things drawn on and off it) or a new world per era. Eras are joined by **shape morphs** (one shape carries into the next scene: the sun becomes an eye) and draw-offs, not cuts.
-- **Clock:** music-led (no strict grid) or voice-led. Scenes ~1.5–4s each.
+- **Clock:** music-led (no strict grid) or voice-led. Scenes ~1.5–4s each. A bridge costs 1.2s by default: under 30s keep to 3 morphs or shorten them (`d: 0.4`).
 - **Turn:** a silence on a held image, then a slam, then a dark stretch with the longest quiet.
 - **Device:** the last era reveals a survivor or successor, then returns to the first image.
 - **Fits:** any history; a session's context window filling over time.

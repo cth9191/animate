@@ -3,18 +3,20 @@
 //  kit/morph.js — the renderer for pieces built from ERAS (scenes) joined by SHAPE MORPHS.
 //
 //  At each bridge time tc:
-//    shrink [tc-0.6, tc-0.2]  the old era is seen through a window shaped like the bridge object (STYLE.window),
+//    shrink [tc-d, tc-m]      the old era is seen through a window shaped like the bridge object (STYLE.window),
 //                             shrinking onto the object while the backdrop fades to blank paper
-//    morph  [tc-0.2, tc+0.2]  on blank paper, the object's outline blends into its counterpart's
+//    morph  [tc-m, tc+m]      on blank paper, the object's outline blends into its counterpart's
 //                             (both resampled by angle around their centroids; colour lerped). Hero-to-hero
 //                             bridges draw the hero itself with blended position, size and ray count.
-//    grow   [tc+0.2, tc+0.6]  the new era opens out of a window shaped like the counterpart
+//    grow   [tc+m, tc+d]      the new era opens out of a window shaped like the counterpart
+//    d = the bridge's half-length (default 0.6s, so a bridge costs 1.2s), m = the morph's half (default 0.2s, or d/3 when d is set).
+//    Short pieces: { tc, d: 0.4 } (0.8s) or fewer bridges — see craft.md -> Transitions.
 //  Era boundaries WITHOUT a bridge are hard cuts (keep at most one: the slam).
 //
 //  The piece defines (in its head / src):
 //    ERA_LIST = [[t0, t1, () => drawScene()], ...]      scenes draw in world coords, call yearTag()/capStrip()
 //    ERA_BG   = ['#hex', ...]                          each era's dominant colour (for the fade to paper)
-//    BRIDGES  = [{ tc, A: () => shape, B: () => shape }]   shape = { P: points, c: '#hex' } or SP(x, y, r, rays)
+//    BRIDGES  = [{ tc, A: () => shape, B: () => shape, d?, m? }]   shape = { P: points, c: '#hex' } or SP(x, y, r, rays)
 //    function pieceCam(era, t) { return null | CAM }   optional; use push() / bump() below
 //  Shapes are in each era's world coords; the bridge object must be in frame at tc (pull push-ins back first).
 //  The look comes from the style kit's STYLE hooks (paper, backdrop, window, blob, hero, post, ones):
@@ -82,21 +84,23 @@ function renderFrame(t, canvas) {
   E0 = ERA_LIST[e][0];
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setLineDash([]); ctx.filter = 'none';
   SPARK_AT = null;
-  const tr = BRIDGES.find((r) => TT >= r.tc - 0.6 - 1e-6 && TT < r.tc + 0.6 - 1e-6);
+  const bd = (r) => r.d ?? 0.6, bm = (r) => r.m ?? (r.d != null ? r.d / 3 : 0.2);
+  const tr = BRIDGES.find((r) => TT >= r.tc - bd(r) - 1e-6 && TT < r.tc + bd(r) - 1e-6);
   if (!tr) {
     const q = renderEra(e, layer(0)); ctx.drawImage(layer(0), 0, 0); flush(q, e);
   } else {
     const ea = eraAt(tr.tc - 0.01), eb = eraAt(tr.tc + 0.01);
     const sa = shapeOf(tr.A()), sb = shapeOf(tr.B());
     const PA = camPts(sa.P, camAt(ea, TT)), PB = camPts(sb.P, camAt(eb, TT));
-    if (TT < tr.tc - 0.2) {
-      const u = EZ.i2(seg(TT, tr.tc - 0.6, tr.tc - 0.2)), { c, kmax } = maskK(PA), k = Math.exp(lerp(Math.log(kmax), 0, u));
+    const D = bd(tr), M = bm(tr);
+    if (TT < tr.tc - M) {
+      const u = EZ.i2(seg(TT, tr.tc - D, tr.tc - M)), { c, kmax } = maskK(PA), k = Math.exp(lerp(Math.log(kmax), 0, u));
       STYLE.backdrop(mixHex(ERA_BG[ea], STYLE.paper, 0.5 + u * 0.5), { eraA: ea, eraB: eb, u, phase: 'shrink' });
       const q = renderEra(ea, layer(0));
       STYLE.window(scaled(PA, c, k), 'mA' + tr.tc, layer(0), { c: sa.c, u, phase: 'shrink', eraA: ea, eraB: eb });
       flush(q, ea);
-    } else if (TT < tr.tc + 0.2) {
-      const u = EZ.io(seg(TT, tr.tc - 0.2, tr.tc + 0.2));
+    } else if (TT < tr.tc + M) {
+      const u = EZ.io(seg(TT, tr.tc - M, tr.tc + M));
       STYLE.backdrop(STYLE.paper, { eraA: ea, eraB: eb, u, phase: 'morph' });
       if (sa.spark && sb.spark) {
         const ca = camAt(ea, TT), cb = camAt(eb, TT), [ax, ay] = camPts([sa.spark.slice(0, 2)], ca)[0], [bx, by] = camPts([sb.spark.slice(0, 2)], cb)[0];
@@ -107,7 +111,7 @@ function renderFrame(t, canvas) {
         if (sb.spark && u > 0.6) STYLE.hero(...camPts([sb.spark.slice(0, 2)], camAt(eb, TT))[0], sb.spark[2] * clamp((u - 0.6) / 0.4), { rays: sb.spark[3], mood: 'wow', key: 'morphspark2' });
       }
     } else {
-      const u = EZ.o2(seg(TT, tr.tc + 0.2, tr.tc + 0.6)), { c, kmax } = maskK(PB), k = Math.exp(lerp(0, Math.log(kmax), u));
+      const u = EZ.o2(seg(TT, tr.tc + M, tr.tc + D)), { c, kmax } = maskK(PB), k = Math.exp(lerp(0, Math.log(kmax), u));
       STYLE.backdrop(mixHex(STYLE.paper, ERA_BG[eb], u * 0.5), { eraA: ea, eraB: eb, u, phase: 'grow' });
       const q = renderEra(eb, layer(0));
       STYLE.window(scaled(PB, c, k), 'mB' + tr.tc, layer(0), { c: sb.c, u, phase: 'grow', eraA: ea, eraB: eb });

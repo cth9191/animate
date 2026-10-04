@@ -26,7 +26,7 @@ All paths below are relative to this skill's base directory. Pieces live in the 
 ## The flow
 
 ### 0. Intake
-Ask the questions in [intake.md](intake.md) — only the ones you can't infer. For the look, show the gallery (`docs/styles.png` in the repo, or build it: `node tools/gallery.mjs <out.png> [<project>/styles]`) and ask: **which of these, or show me a reference?** Then study the references yourself against FRAME.md and the style's checklist.
+Ask the questions in [intake.md](intake.md) — only the ones you can't infer. For the look, build the gallery (`node tools/gallery.mjs <out.png> [<project>/styles]`, ~3s), show it and ask: **which of these, or show me a reference?** Then study the references yourself against FRAME.md and the style's checklist.
 
 ### 1. Story check (text, fast)
 Pick the **format** from [grammar/FORMATS.md](grammar/FORMATS.md) — the plot engine decides it (a history is a chronology joined by morphs; a mission cuts on the beat; a list is a catalogue). Read [grammar/STORY.md](grammar/STORY.md). Web-check the facts. Then show the user:
@@ -37,11 +37,11 @@ Pick the **format** from [grammar/FORMATS.md](grammar/FORMATS.md) — the plot e
 Ask: **approve / change beats / different angle.** Revise until approved. This is where "I meant X, not Y" gets caught cheaply.
 
 ### 2. Look check (2–4 style frames)
-Copy [templates/piece/](templates/piece/) to `pieces/<name>/` and set `"style"` in its `piece.json`.
-- **A shipped style:** read its `STYLE.md` and demo (`styles/<name>/demo/src/`) and draw with its kit.
-- **The user's references:** follow [new-style.md](new-style.md) — measure, match 1–2 frames side by side with `tools/compare.mjs`, get a thumbs up, save the style.
+Start the piece at `pieces/<name>/`: copy `piece.json` and `src/` from the style's demo (`styles/<name>/demo/`) — it already speaks the style's kit — or from [templates/piece/](templates/piece/) for cut paper. Set `"style"` in `piece.json`, then write `brief.md` and `LOG.md` fresh (the template's are placeholders).
+- **A shipped style:** read its `STYLE.md` and demo and draw with its kit.
+- **The user's references:** follow [new-style.md](new-style.md). Measure the references first (`tools/measure/refs.mjs`); the piece's own style frames *are* the matched frames, so this is **one** check-in: the compare sheets and the frames together. Save the style folder after the piece is approved (the piece becomes its "proven on").
 
-Draw 2–4 of the most different beats as full-size frames. Each must pass FRAME.md and the style's checklist. Render them with `tools/storyboard.mjs` (set `TIMELINE.board` to those beats) or `tools/still.mjs`, and show the image. Ask: **thumbs up per frame / change the look / try another style.**
+Draw 2–4 of the most different beats as full-size frames. Each must pass FRAME.md and the style's checklist. Render them side by side with `node tools/still.mjs pieces/<name> 2.25,9.75,16.5 look.png --scale 0.5` (or `tools/storyboard.mjs` with `TIMELINE.board` set to those beats), and show the image. Ask: **thumbs up per frame / change the look / try another style.**
 
 ### 3. Storyboard check (every beat)
 Draw every beat in the approved look. Fill `TIMELINE.board` with one key time per beat (`{ t, title, sound, next }`) and render the board. Ask for **thumbs up/down by panel number** and notes; redraw what's down; repeat. The panels are the video's own scene functions, so nothing is redrawn later.
@@ -50,10 +50,10 @@ Draw every beat in the approved look. Fill `TIMELINE.board` with one key time pe
 1. Write `pieces/<name>/brief.md` (spec, style, beats, bridges, sound plan, claims + sources). Keep a `LOG.md`.
 2. Animate the scenes: timed actions with `TT`, `ev(t, d)`, `popS(t)`, write-ons (see [craft.md](craft.md) → Motion). Wire eras, cameras and bridges in `src/bridges.js` (morph-joined formats) or leave `BRIDGES = []` for hard cuts.
 3. `node tools/build.mjs pieces/<name>` → `index.html` (the style's kit is pulled in from `piece.json` `"style"`).
-4. Test tiles while building: `PIECE=pieces/<name> node tools/tile.mjs tile.png <frames...>` — look at them.
+4. Test tiles while building: `node tools/tile.mjs pieces/<name> tile.png <frames...>` — look at them; tile across every morph and cut.
 5. Score in `src/score.js` (see craft.md → Sound).
 6. `node tools/export.mjs pieces/<name> --share` → frames, `audio.wav`, stems, `renders/final.mp4`, `renders/share.mp4`. Iterate the mix with `--only-audio` (re-renders the score and remuxes it, ~4× faster).
-7. `node tools/review.mjs pieces/<name>` → contact sheets per shot, cut grid, morph grid, story arc, anchor. Fix until it passes, view the sheets, write a per-shot PASS table in `LOG.md`.
+7. `node tools/review.mjs pieces/<name>` → contact sheets per shot, cut grid, morph grid, story arc, anchor, **text** (cut off / overlapping / under the phone UI) and **sound** (the loudest moment, the silence before it, LUFS). Fix until it passes, view the sheets, write a per-shot PASS table in `LOG.md`. Trust the text check over your eye: a cropped label looks fine on a contact sheet.
 
 ### 5. Deliver
 Send `renders/share.mp4`. Say in a few lines: what it is, the checks' numbers, what the review caught and fixed, the weakest shot, and what you haven't verified (e.g. you can't listen to the score). Ask what should change: story, look, transitions, pacing, sound.
@@ -85,7 +85,7 @@ A 45–60s piece has 10–15 scenes; split the drawing across agents once the st
 | `kit/board.js` | the storyboard renderer | steps 2–3 |
 | `kit/score-*.js` | synth (pluck, pad, drone, bass, sub, noiseHit, sweep, riser, chime, blip), loudness stage | scoring |
 | [templates/piece/](templates/piece/) | a working 8s starter piece | step 2 |
-| `tools/` | build, tile, still, storyboard, export, review, compare (reference vs frame), gallery, framehash (pixel-identity check); `measure/` for analysing reference videos | throughout |
+| `tools/` | build, tile, still, storyboard, export, review, textcheck, compare (reference vs frame), gallery, framehash (pixel-identity check); `measure/` for references (`refs.mjs` for stills, `shotlog.py` for video) | throughout |
 | [examples/history-of-ai/](examples/history-of-ai/) | a full 60s worked example (cut paper) | when unsure how something fits |
 
 ## Honesty about what's proven

@@ -8,11 +8,14 @@
 //   5. story arc (if TIMELINE.acts): per-act cut rate, motion and loudness (mix + music stem), checked against the
 //      arc rules for the roles journey / peak / silence / gift / goodbye
 //   6. anchor (if TIMELINE.anchor and window.anchorAt(t)): how often the protagonist sits on its screen spot
+//   7. text (tools/textcheck.mjs): strings cut off by the frame, overlapping other text, or under the phone UI
+//   8. sound (if renders/audio.wav): the loudest 100ms window, the silence before it, integrated loudness (LUFS), true peak
 //
 // The beat grid comes from TIMELINE.bpm (default 100): 8ths = 30/bpm s, 16ths = 15/bpm s.
 //
 // piece.json -> review.refs: { "<shot id>": ["ref-000.0s.jpg", "pieces/other-piece/review/shot01-sheet.jpg"] }
-//   bare names resolve to references/stills/, names with a slash resolve from the repo root
+//   a path with a slash resolves from where you run the tool (the project); a bare name is looked for in
+//   references/, references/stills/ and every references/<look>/ folder
 //
 // usage: node tools/review.mjs pieces/<name>
 import { createRequire } from 'node:module';
@@ -21,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { GPU_ARGS, gpuReport } from './gpu.mjs';
+import { textCheck, printTextCheck } from './textcheck.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = (() => { try { return require('playwright'); } catch { return require(path.join(execSync('npm root -g').toString().trim(), 'playwright')); } })();
@@ -34,7 +38,13 @@ fs.mkdirSync(REVIEW, { recursive: true });
 
 const PIECE = JSON.parse(fs.readFileSync(path.join(ROOT, 'piece.json'), 'utf8'));
 const REF_FOR = PIECE.review?.refs || {};
-const refPath = (n) => (n.includes('/') ? path.join(REPO, n) : path.join(REPO, 'references', 'stills', n));
+const REFDIR = path.join(REPO, 'references');
+const refPath = (n) => {
+  if (path.isAbsolute(n)) return n;
+  if (n.includes('/')) return path.join(REPO, n);
+  const dirs = [REFDIR, ...(fs.existsSync(REFDIR) ? fs.readdirSync(REFDIR).map((d) => path.join(REFDIR, d)).filter((d) => fs.statSync(d).isDirectory()) : [])];
+  return dirs.map((d) => path.join(d, n)).find((f) => fs.existsSync(f)) || path.join(REFDIR, n);
+};
 
 // ---- read TIMELINE + frame->shot mapping straight from index.html
 const PAGE_URL = pathToFileURL(path.join(ROOT, 'index.html')).href + '?export=1';
@@ -70,6 +80,7 @@ const info = await page.evaluate(() => {
     cutFrames: T.cuts.map((c) => { let f = 0; while (f < T.frames && !past(f / T.fps, c)) f++; return f; }),
   };
 });
+const TXT = await textCheck(page, { safe: info.T.height > info.T.width ? PIECE.review?.safe || info.T.safe || { top: 240, bottom: 420, right: 140 } : null });
 await browser.close();
 const { T } = info;
 const FW = T.width || 1080, FH = T.height || 1080, VERTICAL = FH > FW;
@@ -172,7 +183,7 @@ for (let f = 0; f < nFrames; f++) {
 console.log(`FLAT FRAMES (contrast < 6/255): ${blank.length ? blank.join(', ') : 'none'}`);
 
 // ---- loop check
-console.log(`LOOP: diff(last=${nFrames - 1}, first=0) = ${frameDiff(nFrames - 1, 0).toFixed(2)}; typical consecutive diff in the first 40 frames = ${avg(diff.slice(1, Math.min(40, nFrames))).toFixed(2)}`);
+console.log(`LOOP: diff(last=${nFrames - 1}, first=0) = ${frameDiff(nFrames - 1, 0).toFixed(2)}; typical consecutive diff in the first 40 frames = ${avg(diff.slice(1, Math.min(40, nFrames))).toFixed(2)} (info: F4/F6 loop pixel-exactly and F4 checks it; other formats return to the opening image, changed)`);
 
 // ---- narration
 if (T.narration && T.narration.length) {
@@ -310,5 +321,27 @@ if (T.format === 'F2') {
   console.log('\nFORMAT F2 (fixed-stage chronology) checks, grammar/FORMATS.md');
   for (const [ok, text] of fc) console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${text}`);
   console.log(`format F2: ${fc.every(([ok]) => ok) ? 'PASS' : 'FAIL'} (${fc.filter(([ok]) => ok).length}/${fc.length})`);
+}
+// ---- text: cut off, overlapping, under the phone UI (every string drawn, traced to screen)
+printTextCheck(TXT, PIECE.review?.textIgnore || []);
+
+// ---- sound: the payoff numbers every piece reports (craft.md -> Sound), whatever the format
+const WAV = path.join(ROOT, 'renders', 'audio.wav');
+if (fs.existsSync(WAV)) {
+  const SR = 8000, WIN = SR / 10;
+  const pcm = spawnSync('ffmpeg', ['-v', 'error', '-i', WAV, '-ac', '1', '-ar', String(SR), '-f', 's16le', '-'], { maxBuffer: 1 << 28 }).stdout;
+  const db = [];
+  for (let o = 0; o + WIN * 2 <= pcm.length; o += WIN * 2) { let q = 0; for (let i = 0; i < WIN; i++) { const v = pcm.readInt16LE(o + i * 2) / 32768; q += v * v; } db.push(10 * Math.log10(q / WIN + 1e-12)); }
+  const L = db.indexOf(Math.max(...db));
+  let run = 0, best = 0, bestEnd = L;
+  for (let w = Math.max(0, L - 20); w < L; w++) { run = db[w] <= -40 ? run + 1 : 0; if (run > best) { best = run; bestEnd = w; } }
+  const eb = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', WAV, '-af', 'ebur128=peak=true', '-f', 'null', '-'], { encoding: 'utf8' }).stderr || '';
+  const num = (re) => { const m = eb.match(re); return m ? Number(m[1]) : null; };
+  const I = num(/Integrated loudness:[\s\S]*?I:\s+(-?[\d.]+) LUFS/), LRA = num(/Loudness range:[\s\S]*?LRA:\s+(-?[\d.]+) LU/), TP = num(/True peak:[\s\S]*?Peak:\s+(-?[\d.]+) dBFS/);
+  const gift = (T.acts || []).find((a) => a.role === 'gift');
+  console.log('\nSOUND (mix: renders/audio.wav)');
+  console.log(`  loudest 100ms window: ${(L / 10).toFixed(1)}s (${db[L].toFixed(1)} dBFS)${gift ? ` - ${L / 10 >= gift.t0 && L / 10 < gift.t1 ? 'in' : 'NOT in'} the payoff act ${gift.t0}-${gift.t1}s` : ''}`);
+  console.log(`  silence before it: ${(best / 10).toFixed(1)}s at <= -40 dBFS${best ? ` ending ${((bestEnd + 1) / 10).toFixed(1)}s` : ''} in the 2s before (craft.md wants 0.5-4s when the story has a turn)`);
+  console.log(`  loudness: ${I != null ? I.toFixed(1) + ' LUFS integrated' : 'n/a'}, range ${LRA != null ? LRA.toFixed(1) + ' LU' : 'n/a'}, true peak ${TP != null ? TP.toFixed(1) + ' dBFS' : 'n/a'} (phone target about -16 to -14 LUFS, peak <= -1)`);
 }
 console.log(`\nvideo: ${FW}x${FH}, ${nFrames} frames decoded`);

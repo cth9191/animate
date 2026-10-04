@@ -41,7 +41,7 @@ Each style folder has a `STYLE.md` (its rules, palette, motion habits and a fram
 
 - **A story grammar** (`grammar/`) — 8 short-form formats (a history is a chronology joined by shape morphs; a mission cuts on the beat; …), the rules every piece follows (one constant, colour means one thing, silence before the payoff and loudest on it, the end is the start changed), and a checklist for what any single frame needs.
 - **A kit** (`kit/`) — seeded randomness and a line that boils on 2s; cameras; a renderer with shape-morph transitions (the old world closes in on one object, it morphs into the next world's counterpart, the new world opens out of it) that draws through the style's hooks; a storyboard; a synthesizer and a loudness stage for phone playback.
-- **Tools** (`tools/`) — build (assembles one self-contained `index.html` from the piece, the kit and the style), test tiles, stills, storyboard, export (frames → WAV + stems → MP4), review (contact sheets and the measured checks), compare (reference vs frame), gallery, and a frame-hash check that a kit change left a piece pixel-identical.
+- **Tools** (`tools/`) — build (assembles one self-contained `index.html` from the piece, the kit and the style), test tiles, stills, storyboard, export (frames → WAV + stems → MP4), review (contact sheets and the measured checks, including text that's cut off or overlapping, and loudness), compare (reference vs frame), a reference measurer, gallery, and a frame-hash check that a kit change left a piece pixel-identical.
 - **Craft rules** (`craft.md`) — everything learned building these pieces, from "the sustained pad sets a section's loudness, not the plucks" to "cameras put a world point on a screen point".
 - **Parallel builds** — long pieces split one scene file per agent, joined by the build.
 
@@ -77,12 +77,13 @@ Pieces are created in your project under `pieces/<name>/`. You can also drive th
 ```bash
 SKILL=~/.claude/skills/animate            # or the plugin's install path
 node $SKILL/tools/build.mjs pieces/my-piece
-PIECE=pieces/my-piece node $SKILL/tools/tile.mjs tile.png 24 48 96
-node $SKILL/tools/still.mjs pieces/my-piece 2.5 frame.png
-node $SKILL/tools/storyboard.mjs pieces/my-piece/index.html pieces/my-piece/storyboard.png
+node $SKILL/tools/tile.mjs pieces/my-piece tile.png 24 48 96
+node $SKILL/tools/still.mjs pieces/my-piece 2.5,9,14 frames.png --scale 0.5
+node $SKILL/tools/storyboard.mjs pieces/my-piece
 node $SKILL/tools/export.mjs pieces/my-piece --share
 node $SKILL/tools/review.mjs pieces/my-piece
-node $SKILL/tools/compare.mjs refs/still.png pieces/my-piece 2.5 compare.png
+node $SKILL/tools/measure/refs.mjs references/my-look/
+node $SKILL/tools/compare.mjs references/my-look/a.png pieces/my-piece 2.5 compare.png --auto-trim
 ```
 
 Open any built `index.html` in a browser to preview it (click to hear the score; `?t=12.5` freezes a frame). Every style's demo builds the same way: `node $SKILL/tools/build.mjs $SKILL/styles/riso/demo`.

@@ -3,7 +3,7 @@
 //  kit/board.js — the storyboard: every beat in TIMELINE.board drawn as a 9:16 key frame with its notes.
 //  The panels ARE the piece: each one is renderFrame(t) at the beat's key time, so an approved board
 //  carries straight into the video.  TIMELINE.board = [{ t, title, sound, next }]
-//  Render: node tools/storyboard.mjs <piece>/index.html <piece>/storyboard.png [panel numbers...]
+//  Render: node tools/storyboard.mjs <piece dir> [out.png] [panel numbers...]
 // =====================================================================
 function drawPanel(k) { renderFrame(TIMELINE.board[k].t, ctx.canvas); }
 function renderBoard() {
@@ -22,7 +22,9 @@ function renderBoard() {
     const x = GAP + (k % COLS) * (PW + GAP), y = HEAD + Math.floor(k / COLS) * (PH + NOTE + GAP);
     g.drawImage(pc, x, y, PW, PH);
     g.fillStyle = '#f0b27c'; g.font = `700 26px ${SANS}`; g.fillText(`${k + 1}`, x, y + PH + 32);
-    g.fillStyle = '#efe5cf'; g.font = `600 20px ${SANS}`; g.fillText(`${b.t.toFixed(1)}s · ${b.title || ''}`.slice(0, 40), x + 40, y + PH + 30);
+    g.fillStyle = '#efe5cf'; g.font = `600 20px ${SANS}`;
+    let ttl = `${b.t.toFixed(1)}s · ${b.title || ''}`; while (ttl.length > 4 && g.measureText(ttl).width > PW - 44) ttl = ttl.slice(0, -2) + '…';   // fits the panel
+    g.fillText(ttl, x + 40, y + PH + 30);
     g.font = `400 18px ${SANS}`; g.fillStyle = '#cdbd9c';
     const yy = b.sound ? wrap('sound: ' + b.sound, x, y + PH + 58, PW, 22) : y + PH + 58;
     if (b.next) { g.fillStyle = '#a8977a'; wrap('→ ' + b.next, x, yy + 2, PW, 22); }

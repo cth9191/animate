@@ -2,7 +2,7 @@
 
 A style is a plug-in: the story, formats, timing, sound, renderer and tools stay the same, and the style supplies the look. A piece picks one with `"style": "<name>"` in its `piece.json`, and `tools/build.mjs` puts that style's `kit.js` into the built file.
 
-![every style](../../../../../docs/styles.png)
+Build the gallery of every style's sample: `node tools/gallery.mjs styles.png [<project>/styles]`.
 
 | style | the look | motion | proven on |
 |---|---|---|---|
@@ -38,7 +38,7 @@ const STYLE = {
   window(P, key, src, o) { ... }, // draw canvas src seen through outline P (screen coords): a torn hole, an inked iris, a printed circle
                                  //   o = { c: the bridge shape's colour, u: 0..1 progress, phase: 'shrink' | 'morph' | 'grow', eraA, eraB }
   blob(P, c, key, u, o) { ... }, // the morphing shape itself (outline P, colour c, progress u, in the medium)
-  hero(x, y, r, o) { ... },      // the style's hero, for hero-to-hero bridges (SP(x, y, r, n) shapes)
+  hero(x, y, r, o) { ... },      // the style's hero, for hero-to-hero bridges (SP(x, y, r, n) shapes): r = half the hero's size, n may be ignored
   heroColor: '#hex', heroPts(x, y, r, n) { ... },   // the hero's colour and outline for bridges (optional)
   post() { ... },                // after every frame: grain, a print pass, an upscale (optional)
   ones: false,                   // true = motion on 1s (TT = every frame); default on 2s
@@ -56,6 +56,7 @@ Renderer quirks a kit has to know:
 - **Colours given to the renderer are 6-digit hex** (`ERA_BG`, `heroColor`, bridge shapes' `c`): `mixHex` blends them. Mid-morph, `blob` and `backdrop` receive the blend as an `rgb(r,g,b)` string.
 - **Eras draw under the camera transform** (`push`, `bump`, `pieceCam`). A look with constant line widths (hairlines, pixels) divides widths by the current zoom (`ctx.getTransform().a`).
 - **The morph resamples both outlines by angle around their centroids** — bridge shapes of similar proportions morph cleanly; a dot into a long thin bar pinches.
+- **Captions drawn through `DEFER` stay at screen size during a morph:** the old era's tags show over the shrinking window, the new era's over the growing one. Suppress them in a style's caption helper if they fight the morph (e.g. skip when the era layer is being drawn for a window: compare `TT` with the bridge times).
 
 ### Names a kit must not reuse
 
@@ -66,6 +67,6 @@ Renderer quirks a kit has to know:
 1. Extract the look's drawing code into `kit.js` on top of `kit/core.js` (drop what core already has; keep names stable).
 2. Write `STYLE` hooks in the medium.
 3. Build `demo/` (copy `crosshatch/demo/`): two eras, one shape morph, a hero, a caption, 3+ details of background life.
-4. `node tools/build.mjs styles/<name>/demo`, then `PIECE=styles/<name>/demo node tools/tile.mjs tile.png <frames>` → `deterministic: true`, and look at the tile.
+4. `node tools/build.mjs styles/<name>/demo`, then `node tools/tile.mjs styles/<name>/demo tile.png <frames>` → `deterministic: true`, and look at the tile.
 5. `node tools/still.mjs styles/<name>/demo <t> styles/<name>/sample.png --scale 0.5`.
 6. Write `STYLE.md` with its frame checklist.

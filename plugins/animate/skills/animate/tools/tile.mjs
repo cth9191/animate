@@ -1,15 +1,20 @@
 // test tile: render chosen frames into a grid (each 270x480) with the phone-UI safe zones drawn in red; print timings + determinism
-// usage: PIECE=pieces/<name> node tools/tile.mjs out.png f0 f1 f2 ...   (frame numbers at TIMELINE.fps)
+// usage: node tools/tile.mjs <piece dir> out.png f0 f1 f2 ...   (frame numbers at TIMELINE.fps)
+//        (the older form PIECE=<piece dir> node tools/tile.mjs out.png f0 ... still works)
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
-const { chromium } = require(path.join(execSync('npm root -g').toString().trim(), 'playwright'));
-const [out, ...fr] = process.argv.slice(2);
+const { chromium } = (() => { try { return require('playwright'); } catch { return require(path.join(execSync('npm root -g').toString().trim(), 'playwright')); } })();
+const argv = process.argv.slice(2);
+const isPiece = (a) => a && (a.endsWith('.html') || (fs.existsSync(a) && fs.statSync(a).isDirectory()));
+const piece = isPiece(argv[0]) ? argv.shift() : process.env.PIECE;
+const [out, ...fr] = argv;
+if (!piece || !out || !fr.length) { console.error('usage: node tools/tile.mjs <piece dir> out.png f0 f1 ...'); process.exit(2); }
 const frames = fr.map(Number);
-const URL = pathToFileURL(path.resolve(process.env.PIECE || (console.error("usage: PIECE=<piece dir> node tile.mjs out.png f0 f1 ..."), process.exit(2)), "index.html")).href + '?export=1';
+const URL = pathToFileURL(path.resolve(piece.endsWith('.html') ? piece : path.join(piece, 'index.html'))).href + '?export=1';
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1080, height: 1920 } });
 p.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
