@@ -12,11 +12,10 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 - **One device you can say in a sentence** ("the spark gains a ray each era").
 - **A history's facts can supply the arc** — and must be true. Web-check every date and number; say "a", not "the first", unless sourced.
 
-## Frame (see grammar/FRAME.md)
-- **A character with a face, acting** in almost every frame; things happen to it and it reacts.
-- **A full-bleed world**, not an object on blank paper (unless blank is the stage).
-- **The medium shows:** torn edges, shadows, crayon, patterns, grain.
-- **3+ details of background life** per frame (a cat, steam, birds, confetti).
+## Frame (see grammar/FRAME.md and the style's own checklist in its STYLE.md)
+- **One constant the eye can hold** in every frame: a hero with a face in character styles, the object or the axes in diagram styles.
+- **The medium shows** at phone size: torn edges in cut paper, hatching in ink, dots in riso, graphite in sketchbook, crisp pixels in pixel art.
+- **Small life even in held frames** (steam, a blink, a blinking LED, a cursor); character styles want 3+ details of background life per frame.
 - **Act ideas out literally** ("AI winter" = snow on a closed lab and an empty piggy bank).
 - **Vary scale across the board**, including at least one extreme close-up.
 - **Phone scale:** anything that matters is ≥ ~100px on the 1080-wide frame; captions ≥ 50px; keep 9:16 content inside x 60–940, y 250–1500 (the platform UI covers the rest).
@@ -25,10 +24,10 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 ## Transitions
 - **Match the transition to the format.** Chronologies transition *from the scene*: a shape morph (sun → eye) or draw-off/draw-on. Character and catalogue pieces cut hard on the beat.
 - **Keep at most one hard cut in a morph-joined piece** — the slam on the payoff.
-- **Shape-morph bridge (kit/morph.js):** the old world closes in on one object through a torn-paper window shaped like it, the object blends into its counterpart on blank paper, the new world opens out of the counterpart. Write one bridge per beat at the storyboard stage and build those bridges.
+- **Shape-morph bridge (kit/morph.js):** the old world closes in on one object through a window shaped like it (the style draws the window: a torn hole, an inked iris, a printed circle), the object blends into its counterpart on blank paper, the new world opens out of the counterpart. Write one bridge per beat at the storyboard stage and build those bridges.
 - **The bridge object must be in frame at the boundary** — pull push-ins back first.
 - **Hero-to-hero bridges draw the hero itself** (blended position/size), not two outlines.
-- **Morph on blank paper**, not a blend of two wall colours (mud).
+- **Morph on the style's blank sheet** (`STYLE.paper`), not a blend of two wall colours (mud).
 
 ## Motion
 - **Everything moves on 2s:** time is `TT = B * 2 / FPS`; the boil, the camera and every move share the boil index `B = floor(F / 2)`.
@@ -54,6 +53,9 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 - **You can't hear the score.** Measure it (`review.mjs` arc table, the loudest 100ms window) and tell the user to listen.
 
 ## Code
+- **A style is a plug-in:** `piece.json` `"style"` picks `styles/<name>/kit.js`; the renderer only calls its `STYLE` hooks. One style per piece (kits share names).
+- **Every frame starts from a clean sheet:** never rely on what the last frame left on a canvas (the renderer clears the era layer to `STYLE.paper`); `tile.mjs` catches it as `deterministic: false`.
+- **`trace()` rounds corners through midpoints:** give it dense points (`resample(P, true, 30)`) for boxes that must cover the frame.
 - **One file, built:** `tools/build.mjs` concatenates `src/` parts with `kit/` files; edit the parts, never the built `index.html`.
 - **Deterministic:** `RNG(...)` seeded by keys; `wobble(..., key)` reseeds per boil step; never `Math.random`/`Date`. `tools/tile.mjs` prints a determinism check.
 - **Write big files in ~200-line parts**, one per message; write scripts with the Write tool rather than long shell heredocs.

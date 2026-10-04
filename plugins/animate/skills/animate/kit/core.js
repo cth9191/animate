@@ -43,7 +43,7 @@ const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
 const lerp = (a, b, t) => a + (b - a) * t;
 const seg = (t, a, b) => clamp((t - a) / (b - a));
 // has absolute time t reached cut time c? (cuts snap to the nearest frame, like shot boundaries)
-const past = (t, c) => Math.round(t * 24 + 1e-6) >= Math.round(c * 24);
+const past = (t, c) => Math.round(t * FPS + 1e-6) >= Math.round(c * FPS);
 const dist = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 const EZ = {
   o2: (t) => 1 - (1 - clamp(t)) ** 2,
@@ -77,7 +77,7 @@ const C = {
   cyan: '#52d6c4', mag: '#e0368f', glow: '#5de37a', white: '#f4f6ff',
 };
 const RAINBOW = ['#f0d042', '#e050b8', '#46cde0', '#7ad866', '#a47ef0'];
-const MONO = 'Consolas, "Cascadia Mono", "Courier New", monospace';
+const MONO = 'Consolas, "Cascadia Mono", Menlo, "DejaVu Sans Mono", "Courier New", monospace';   // Windows first, then macOS / Linux
 
 // ---------------------------------------------------------------------
 //  geometry
@@ -463,6 +463,7 @@ function drawPencil(tx, ty, ang, len, k = 1, key = 'pencil') {
   paint(rrectPts(len + 24, -16, 34, 32, 10), { fill: '#e58f8c', key: key + 'e', w: 2.6, tex: [{ k: 'pencil', c: C.roseD, al: 0.5, per: 60 }] });
   ctx.restore();
 }
+// smoothstep of x between a and b (NOT manim's `smooth` rate function — the math style calls that smoothM)
 const smooth = (a, b, x) => { const u = clamp((x - a) / (b - a)); return u * u * (3 - 2 * u); };
 const mod = (a, n) => ((a % n) + n) % n;
 function asterisk(x, y, r0, r1, n, rot, color, w) {
@@ -470,3 +471,12 @@ function asterisk(x, y, r0, r1, n, rot, color, w) {
   for (let i = 0; i < n; i++) { const a = i / n * TAU + rot; ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); ctx.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); }
   ctx.stroke(); ctx.restore();
 }
+
+// ---------------------------------------------------------------------
+//  time (set by the renderer): TT = absolute time on the motion step (on 2s unless STYLE.ones);
+//  E0 = the current era's start; DEFER = overlay queue (captions drawn after the camera); SPARK_AT = the hero's screen spot
+//  ev(t, d) = 0..1 progress of an event at t over d seconds; popS(t) = back-eased pop-in scale
+// ---------------------------------------------------------------------
+let TT = 0, E0 = 0, DEFER = null, SPARK_AT = null;
+const ev = (t, d = 0.25) => clamp((TT - t) / d);
+const popS = (t) => (TT < t ? 0 : EZ.back(clamp((TT - t) / 0.25)));

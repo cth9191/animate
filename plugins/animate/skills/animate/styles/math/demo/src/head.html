@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Math demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #050506; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  MATH DEMO — 9:16, 6.0s @ 120 BPM, 24fps, motion on 1s. a² + b² = c² is written and drawn as a 4-3-5 triangle
+//  with its squares (16 + 9 = 25 cells); the square on c morphs into the unit circle, where a and b become cos θ and
+//  sin θ and the equation Transforms into cos²θ + sin²θ = 1 while a live readout keeps summing to 1.
+//  Colour code (one colour per quantity, everywhere): a / cos θ red, b / sin θ green, c / 1 yellow, θ blue.
+//  Build: node <skill>/tools/build.mjs <skill>/styles/math/demo
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;
+const DURATION = 6.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };
+const HAND = 'Cambria, "Cambria Math", "Latin Modern Roman", "CMU Serif", "STIX Two Text", "Times New Roman", Georgia, serif';   // the storyboard's title font
+const CX = 500;   // caption centre x: the middle of the safe area (x 60-940)
+
+const ERA_LIST = [[0, 3, () => scenePythagoras()], [3, 6, () => sceneCircle()]];
+const SHOTS = [
+  ['pythagoras', 0, 0.0, 3.0, 'a² + b² = c², written and drawn: 16 + 9 = 25 cells'],
+  ['circle',     1, 3.0, 6.0, 'the square on c becomes the unit circle: cos²θ + sin²θ = 1'],
+];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'morph-chain',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [],
+  morphs: [3.0],
+  cues: { eq: 0.0, sides: 0.25, squares: 0.75, cells: 1.25, sum: 1.5, flash: 2.0, transform: 3.5, live: 4.0, sweep: 4.25, flash2: 5.5 },
+  acts: [
+    { name: '1 Pythagoras', role: 'build', t0: 0.0, t1: 3.0 },
+    { name: '2 Circle',     role: 'gift',  t0: 3.0, t1: 6.0 },
+  ],
+  board: [
+    { t: 2.1, title: 'the areas add up', sound: 'plucks on each square, a chime on the flash', next: 'the square on c becomes a circle' },
+    { t: 5.2, title: 'cos²θ + sin²θ = 1', sound: 'a pad, soft ticks while θ sweeps', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

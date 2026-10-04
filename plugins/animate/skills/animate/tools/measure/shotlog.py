@@ -3,7 +3,7 @@
 #   stepped         runs where motion alternates high/low on 2s (a camera or card stepped every 2 frames)
 #   flicker         frame n ~ n-2 but != n-1 (A/B alternation on 2s)
 #   per second      cuts, mean motion, loudness median / p90 (dBFS, 100ms RMS), onsets (energy flux), brightness (centroid Hz)
-# usage: python shotlog.py references/some-video.mp4 [more videos]
+# usage: python shotlog.py references/some-video.mp4 [more videos] [--fps N]   (default: the video's own fps, via ffprobe)
 import subprocess, sys
 import numpy as np
 
@@ -66,4 +66,12 @@ def measure(v, fps=24):
     print(f'loudest 100ms: {db.max():.1f} dB at {db.argmax() / 10:.1f}s; quietest second (median): {min(np.median(db[s * 10:(s + 1) * 10]) for s in range(secs - 1)):.1f} dB')
 
 if __name__ == '__main__':
-    for v in sys.argv[1:]: measure(v)
+    args = sys.argv[1:]
+    want = float(args[args.index('--fps') + 1]) if '--fps' in args else None
+    if want: i = args.index('--fps'); del args[i:i + 2]
+    for v in args:
+        fps = want
+        if not fps:
+            r = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', v], capture_output=True, text=True).stdout.strip()
+            a_, b_ = (r.split('/') + ['1'])[:2]; fps = float(a_) / float(b_ or 1) if a_ else 24
+        measure(v, max(1, round(fps)))   # frame indexing needs a whole fps (29.97 -> 30)

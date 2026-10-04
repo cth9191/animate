@@ -3,7 +3,7 @@
 //  kit/morph.js — the renderer for pieces built from ERAS (scenes) joined by SHAPE MORPHS.
 //
 //  At each bridge time tc:
-//    shrink [tc-0.6, tc-0.2]  the old era is seen through a torn-paper window shaped like the bridge object,
+//    shrink [tc-0.6, tc-0.2]  the old era is seen through a window shaped like the bridge object (STYLE.window),
 //                             shrinking onto the object while the backdrop fades to blank paper
 //    morph  [tc-0.2, tc+0.2]  on blank paper, the object's outline blends into its counterpart's
 //                             (both resampled by angle around their centroids; colour lerped). Hero-to-hero
@@ -17,8 +17,9 @@
 //    BRIDGES  = [{ tc, A: () => shape, B: () => shape }]   shape = { P: points, c: '#hex' } or SP(x, y, r, rays)
 //    function pieceCam(era, t) { return null | CAM }   optional; use push() / bump() below
 //  Shapes are in each era's world coords; the bridge object must be in frame at tc (pull push-ins back first).
+//  The look comes from the style kit's STYLE hooks (paper, backdrop, window, blob, hero, post, ones):
+//  this file draws nothing itself, so the same piece structure works in any style.
 // =====================================================================
-const PAPER_BG = '#efe5cf';
 // ---- cameras: CAM = { z, tx, ty }; camOf({ z, p, to }) puts world point p on screen point to
 const CAM0 = { z: 1, tx: 0, ty: 0 };
 const camOf = (c) => ({ z: c.z, tx: c.to[0] - c.z * c.p[0], ty: c.to[1] - c.z * c.p[1] });
@@ -35,7 +36,7 @@ function starPts(x, y, r, n, r0 = -Math.PI / 2, m = 96) {
   return P;
 }
 const SP = (x, y, r, n) => ({ spark: [x, y, r, n] });
-const shapeOf = (s) => (s.spark ? { P: starPts(...s.spark), c: PAL.orange, spark: s.spark } : s);
+const shapeOf = (s) => (s.spark ? { P: (STYLE.heroPts || starPts)(...s.spark), c: STYLE.heroColor, spark: s.spark } : s);
 function byAngle(P, m = 96) {   // resample a closed outline to m points by angle around its centroid
   const c = P.reduce((a, p) => [a[0] + p[0] / P.length, a[1] + p[1] / P.length], [0, 0]), Q = resample(P, true, 4), out = [];
   for (let i = 0; i < m; i++) {
@@ -59,18 +60,12 @@ function layer(i) { if (!LAYER[i]) { const c = document.createElement('canvas');
 function renderEra(e, target) {   // draws era e into target; returns its overlay queue (year tag, caption)
   const saved = ctx; ctx = target.getContext('2d');
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.filter = 'none'; ctx.setLineDash([]);
+  ctx.fillStyle = STYLE.paper; ctx.fillRect(0, 0, W, H);   // a clean sheet every frame: nothing carries over between frames
   const cam = camAt(e, TT); ctx.setTransform(cam.z, 0, 0, cam.z, cam.tx, cam.ty);
   DEFER = []; ERA_LIST[e][2](); const q = DEFER; DEFER = null;
   ctx.restore(); ctx = saved;
   return q;
 }
-function tornWindow(P, key) {   // the world seen through a hand-cut window: torn edge, paper rim, shadow
-  const Q = torn(wobble(P, true, 3, key, 9), key, 2.4);
-  ctx.save(); ctx.shadowColor = 'rgba(35,20,10,0.35)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6; trace(Q, true); ctx.fillStyle = PAPER_BG; ctx.fill(); ctx.restore();
-  ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(layer(0), 0, 0); ctx.restore();
-  ctx.save(); trace(Q, true); ctx.strokeStyle = '#fbf6ea'; ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore();
-}
-function backdrop(c) { cut(rect(-30, -30, W + 60, H + 60, 0), c, { key: 'backdrop', shadow: false, tear: 0, grain: 0.8, shade: false }); }
 function flush(q, e) { const keep = E0; E0 = ERA_LIST[e][0]; ctx.setTransform(1, 0, 0, 1, 0, 0); q.forEach((f) => f()); E0 = keep; }
 function shotAtFrame(fr) {
   for (const s of TIMELINE.shots) if (fr >= Math.round(s.t0 * FPS) && fr < Math.round(s.t1 * FPS)) return s;
@@ -82,7 +77,7 @@ function renderFrame(t, canvas) {
   ctx = cv.getContext('2d');
   F = ((Math.round(t * FPS) % NFRAMES) + NFRAMES) % NFRAMES;
   B = Math.floor(F / 2);
-  TT = B * 2 / FPS;
+  TT = (STYLE.ones ? F : B * 2) / FPS;
   const s = shotAtFrame(F), e = Math.max(0, eraAt(TT));
   E0 = ERA_LIST[e][0];
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setLineDash([]); ctx.filter = 'none';
@@ -96,31 +91,31 @@ function renderFrame(t, canvas) {
     const PA = camPts(sa.P, camAt(ea, TT)), PB = camPts(sb.P, camAt(eb, TT));
     if (TT < tr.tc - 0.2) {
       const u = EZ.i2(seg(TT, tr.tc - 0.6, tr.tc - 0.2)), { c, kmax } = maskK(PA), k = Math.exp(lerp(Math.log(kmax), 0, u));
-      backdrop(mixHex(ERA_BG[ea], PAPER_BG, 0.5 + u * 0.5));
+      STYLE.backdrop(mixHex(ERA_BG[ea], STYLE.paper, 0.5 + u * 0.5), { eraA: ea, eraB: eb, u, phase: 'shrink' });
       const q = renderEra(ea, layer(0));
-      tornWindow(scaled(PA, c, k), 'mA' + tr.tc);
+      STYLE.window(scaled(PA, c, k), 'mA' + tr.tc, layer(0), { c: sa.c, u, phase: 'shrink', eraA: ea, eraB: eb });
       flush(q, ea);
     } else if (TT < tr.tc + 0.2) {
       const u = EZ.io(seg(TT, tr.tc - 0.2, tr.tc + 0.2));
-      backdrop(PAPER_BG);
+      STYLE.backdrop(STYLE.paper, { eraA: ea, eraB: eb, u, phase: 'morph' });
       if (sa.spark && sb.spark) {
         const ca = camAt(ea, TT), cb = camAt(eb, TT), [ax, ay] = camPts([sa.spark.slice(0, 2)], ca)[0], [bx, by] = camPts([sb.spark.slice(0, 2)], cb)[0];
-        spark(lerp(ax, bx, u), lerp(ay, by, u), lerp(sa.spark[2] * ca.z, sb.spark[2] * cb.z, u), { rays: Math.round(lerp(sa.spark[3], sb.spark[3], u)), mood: 'wow', key: 'morphspark' });
+        STYLE.hero(lerp(ax, bx, u), lerp(ay, by, u), lerp(sa.spark[2] * ca.z, sb.spark[2] * cb.z, u), { rays: Math.round(lerp(sa.spark[3], sb.spark[3], u)), mood: 'wow', key: 'morphspark' });
       } else {
         const A2 = byAngle(PA), B2 = byAngle(PB), M = A2.P.map((p, i) => [lerp(p[0], B2.P[i][0], u), lerp(p[1], B2.P[i][1], u)]);
-        cut(M, mixHex(sa.c, sb.c, u), { key: 'morph' + tr.tc, tear: 1.0, amt: 1.2 });
-        if (sb.spark && u > 0.6) spark(...camPts([sb.spark.slice(0, 2)], camAt(eb, TT))[0], sb.spark[2] * clamp((u - 0.6) / 0.4), { rays: sb.spark[3], mood: 'wow', key: 'morphspark2' });
+        STYLE.blob(M, mixHex(sa.c, sb.c, u), 'morph' + tr.tc, u, { eraA: ea, eraB: eb, phase: 'morph' });
+        if (sb.spark && u > 0.6) STYLE.hero(...camPts([sb.spark.slice(0, 2)], camAt(eb, TT))[0], sb.spark[2] * clamp((u - 0.6) / 0.4), { rays: sb.spark[3], mood: 'wow', key: 'morphspark2' });
       }
     } else {
       const u = EZ.o2(seg(TT, tr.tc + 0.2, tr.tc + 0.6)), { c, kmax } = maskK(PB), k = Math.exp(lerp(0, Math.log(kmax), u));
-      backdrop(mixHex(PAPER_BG, ERA_BG[eb], u * 0.5));
+      STYLE.backdrop(mixHex(STYLE.paper, ERA_BG[eb], u * 0.5), { eraA: ea, eraB: eb, u, phase: 'grow' });
       const q = renderEra(eb, layer(0));
-      tornWindow(scaled(PB, c, k), 'mB' + tr.tc);
+      STYLE.window(scaled(PB, c, k), 'mB' + tr.tc, layer(0), { c: sb.c, u, phase: 'grow', eraA: ea, eraB: eb });
       flush(q, eb);
     }
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  grain({ n: 3000 });
+  if (STYLE.post) STYLE.post();
   ctx.restore();
   return s.id;
 }

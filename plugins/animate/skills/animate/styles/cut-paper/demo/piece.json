@@ -1,0 +1,8 @@
+{
+  "name": "cut-paper-demo",
+  "title": "Cut paper demo",
+  "format": { "width": 1080, "height": 1920, "fps": 24, "bpm": 120, "duration": 8.0, "frames": 192 },
+  "storyFormat": "F2 morph chain",
+  "style": "cut-paper",
+  "review": { "safe": { "top": 240, "bottom": 420, "right": 140 }, "refs": {} }
+}

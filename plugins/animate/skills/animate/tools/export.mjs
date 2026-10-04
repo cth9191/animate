@@ -15,6 +15,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { GPU_ARGS, gpuReport } from './gpu.mjs';
 
 const require = createRequire(import.meta.url);
 function loadPlaywright() {
@@ -41,8 +42,7 @@ const url = pathToFileURL(path.join(ROOT, 'index.html')).href + '?export=1';
 fs.mkdirSync(FRAMES, { recursive: true });
 fs.mkdirSync(RENDERS, { recursive: true });
 const BASE_ARGS = ['--autoplay-policy=no-user-gesture-required'];
-// WebGL pieces (TIMELINE.gpu or --gpu) render on the real GPU through ANGLE/D3D11; without it Chromium falls back to SwiftShader
-const GPU_ARGS = ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'];
+// WebGL pieces (TIMELINE.gpu or --gpu) render on the real GPU (tools/gpu.mjs: ANGLE/D3D11 on Windows); without one Chromium falls back to software
 let browser = await chromium.launch({ args: BASE_ARGS });
 
 // read the frame size before sizing the real viewport
@@ -57,7 +57,7 @@ await probe.close();
 if (meta.gpu || flag('gpu')) {
   await browser.close();
   browser = await chromium.launch({ args: [...BASE_ARGS, ...GPU_ARGS] });
-  console.log('gpu: ANGLE/D3D11');
+  const gp = await browser.newPage(); await gpuReport(gp); await gp.close();
 }
 
 const context = await browser.newContext({ viewport: { width: meta.width, height: meta.height }, deviceScaleFactor: 1 });
@@ -128,7 +128,7 @@ if (!flag('no-mux') && !onlyAudio && full) {
     // libass scales subtitle units to PlayResY=288, so margins/sizes are in 288ths of the frame height
     const unit = meta.height / 288, vertical = meta.height > meta.width;
     const marginV = Math.round((vertical ? 470 : 70) / unit), fontSize = Math.round((vertical ? 64 : 46) / unit);
-    const style = `Fontname=Consolas,Fontsize=${fontSize},PrimaryColour=&H00FFFFFF,BackColour=&H99000000,BorderStyle=3,Outline=6,Shadow=0,Alignment=2,MarginV=${marginV}`;
+    const style = `Fontname=${process.platform === 'win32' ? 'Consolas' : process.platform === 'darwin' ? 'Menlo' : 'DejaVu Sans Mono'},Fontsize=${fontSize},PrimaryColour=&H00FFFFFF,BackColour=&H99000000,BorderStyle=3,Outline=6,Shadow=0,Alignment=2,MarginV=${marginV}`;
     const r2 = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', 'final.mp4',
       '-vf', `subtitles=narration.srt:force_style='${style}'`, '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'copy', 'final-captions.mp4'],
     { cwd: RENDERS, stdio: 'inherit' });

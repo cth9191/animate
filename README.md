@@ -1,10 +1,10 @@
-# Animate — hand-drawn procedural animation for Claude Code
+# Animate — procedural animation in any style, for Claude Code
 
-A Claude Code skill that makes short animated videos entirely in code: one `<canvas>`, drawn and scored procedurally, deterministic frame by frame, rendered to MP4 with a headless browser and ffmpeg. Explainers, histories, little stories — in a hand-made look (cut paper, crosshatch ink).
+A Claude Code skill that makes short animated videos entirely in code: one `<canvas>`, drawn and scored procedurally, deterministic frame by frame, rendered to MP4 with a headless browser and ffmpeg. Explainers, histories, little stories — in one of the built-in styles, or in a new look matched from your own references.
 
-![storyboard of the example piece](docs/storyboard.png)
+![the built-in styles](docs/styles.png)
 
-*The storyboard of the worked example, "A short history of AI" (60s, 9:16): every panel is a frame of the finished video.*
+*The built-in styles, each a frame from its demo piece: cut paper, crosshatch ink, riso print, sketchbook, math, pixel.*
 
 ## How it works
 
@@ -12,23 +12,43 @@ The skill walks you through a few questions, then makes you approve three cheap 
 
 | step | what you see | you decide |
 |---|---|---|
-| 0. Intake | a handful of questions (subject, length, voice, references, hero) | answers, or "just make it" |
+| 0. Intake | a handful of questions (subject, length, voice, the look, hero) and the style gallery | answers, a style, or your references |
 | 1. Story check | the format it picked and a numbered beat table, facts web-checked | approve / change beats |
-| 2. Look check | 2–4 full-size style frames | thumbs up per frame |
+| 2. Look check | 2–4 full-size style frames (for a new look: side-by-side comparisons with your references) | thumbs up per frame |
 | 3. Storyboard | every beat as a key frame, with sound and the transition into the next | thumbs up/down by panel number |
 | 4. Build | — (animate the approved panels, render, review) | — |
 | 5. Delivery | the video plus measured checks: cuts on the beat grid, story arc loudness, hero anchoring, the loudest moment after the silence | notes → a revision run |
 
-What's baked in:
+## Styles
 
-- **A story grammar** (`grammar/`) — 8 short-form formats (a history is a chronology joined by shape morphs; a mission cuts on the beat; …), the rules every piece follows (one constant, colour means one thing, silence before the payoff and loudest on it, the end is the start changed), and a checklist for what a single frame needs (a character with a face, a full-bleed world, visible medium, background life).
-- **A kit** (`kit/`) — seeded randomness and a hand-drawn line that boils on 2s; a cut-paper kit (torn edges, shadows, crayon, patterns, faces, a hero character); cameras; a shape-morph transition (the old world closes in on one object, it morphs into the next world's counterpart, the new world opens out of it); a synthesizer and a loudness stage for phone playback.
-- **Tools** (`tools/`) — build (assembles one self-contained `index.html`), test tiles, storyboard, export (frames → WAV + stems → MP4), and review (contact sheets and the measured checks).
+A style is a plug-in: the story grammar, timing, sound, renderer and tools stay the same; the style supplies the drawing kit. A piece picks one in its `piece.json` (`"style": "riso"`).
+
+| style | the look |
+|---|---|
+| cut paper | torn paper, drop shadows, crayon, patterns, characters with faces |
+| crosshatch | sketchy ink that boils on 2s, hatch and pencil shading, warm paper and navy "inside the machine" worlds |
+| riso | a three-ink risograph print: halftone screens at their own angles, overprints, misregistration |
+| sketchbook | graphite and one accent colour on a sketchbook page, hand lettering |
+| math | a manim-style math explainer: black stage, axes and graphs, colour-coded variables, smooth easing |
+| pixel | low-resolution eras: drawn at the true resolution, upscaled nearest-neighbour, a bitmap font |
+
+**Your own look:** give the skill references (a video, stills, a web page) and it follows a procedure — measure the palette, line weight, texture, motion and cut rhythm; draw 1–2 matched frames next to your references (`tools/compare.mjs`); ask for your thumbs up; save it as `styles/<name>/` in your project so every later piece can use it. Reference media stays on your machine.
+
+Each style folder has a `STYLE.md` (its rules, palette, motion habits and a frame checklist), a `kit.js`, a `sample.png` and a small `demo/` piece.
+
+## What's baked in
+
+- **A story grammar** (`grammar/`) — 8 short-form formats (a history is a chronology joined by shape morphs; a mission cuts on the beat; …), the rules every piece follows (one constant, colour means one thing, silence before the payoff and loudest on it, the end is the start changed), and a checklist for what any single frame needs.
+- **A kit** (`kit/`) — seeded randomness and a line that boils on 2s; cameras; a renderer with shape-morph transitions (the old world closes in on one object, it morphs into the next world's counterpart, the new world opens out of it) that draws through the style's hooks; a storyboard; a synthesizer and a loudness stage for phone playback.
+- **Tools** (`tools/`) — build (assembles one self-contained `index.html` from the piece, the kit and the style), test tiles, stills, storyboard, export (frames → WAV + stems → MP4), review (contact sheets and the measured checks), compare (reference vs frame), gallery, and a frame-hash check that a kit change left a piece pixel-identical.
 - **Craft rules** (`craft.md`) — everything learned building these pieces, from "the sustained pad sets a section's loudness, not the plucks" to "cameras put a world point on a screen point".
+- **Parallel builds** — long pieces split one scene file per agent, joined by the build.
+
+**Coming:** a WebGL motion-design style (ray-marched 3D, sub-frame motion blur, bloom) — the export and review tools already run WebGL pieces on the GPU and warn when only software rendering is available.
 
 ## Install
 
-Requirements: [Claude Code](https://code.claude.com), Node 18+, [Playwright](https://playwright.dev) with Chromium, and ffmpeg on your PATH.
+Requirements: [Claude Code](https://code.claude.com), Node 18+, [Playwright](https://playwright.dev) with Chromium, and ffmpeg on your PATH. Fonts are local system fonts with fallbacks for Windows, macOS and Linux.
 
 ```bash
 npm i -g playwright && npx playwright install chromium
@@ -46,7 +66,9 @@ Or copy the skill folder by hand: `plugins/animate/skills/animate/` → `~/.clau
 ## Use
 
 ```
-/animate a 45-second history of the bicycle
+/animate a 45-second history of the bicycle, cut paper
+/animate how a hash map works, in the math style
+/animate a short about our API in the style of these screenshots: ./refs/
 ```
 
 Pieces are created in your project under `pieces/<name>/`. You can also drive the tools yourself:
@@ -55,16 +77,18 @@ Pieces are created in your project under `pieces/<name>/`. You can also drive th
 SKILL=~/.claude/skills/animate            # or the plugin's install path
 node $SKILL/tools/build.mjs pieces/my-piece
 PIECE=pieces/my-piece node $SKILL/tools/tile.mjs tile.png 24 48 96
+node $SKILL/tools/still.mjs pieces/my-piece 2.5 frame.png
 node $SKILL/tools/storyboard.mjs pieces/my-piece/index.html pieces/my-piece/storyboard.png
 node $SKILL/tools/export.mjs pieces/my-piece --share
 node $SKILL/tools/review.mjs pieces/my-piece
+node $SKILL/tools/compare.mjs refs/still.png pieces/my-piece 2.5 compare.png
 ```
 
-Open any built `index.html` in a browser to preview it (click to hear the score; `?t=12.5` freezes a frame).
+Open any built `index.html` in a browser to preview it (click to hear the score; `?t=12.5` freezes a frame). Every style's demo builds the same way: `node $SKILL/tools/build.mjs $SKILL/styles/riso/demo`.
 
 ## The example
 
-`plugins/animate/skills/animate/examples/history-of-ai/` is a complete 60-second piece built with the kit: 15 eras from Turing's "Can machines think?" (1950) to Claude Code (2025), a small orange "spark" that gains a ray each era, 13 shape-morph transitions, one hard cut on the payoff, and a synthesized score. Build it with `node plugins/animate/skills/animate/tools/build.mjs plugins/animate/skills/animate/examples/history-of-ai`, then export it.
+`plugins/animate/skills/animate/examples/history-of-ai/` is a complete 60-second cut-paper piece: 15 eras from Turing's "Can machines think?" (1950) to Claude Code (2025), a small orange "spark" that gains a ray each era, 13 shape-morph transitions, one hard cut on the payoff, and a synthesized score. Build it with `node plugins/animate/skills/animate/tools/build.mjs plugins/animate/skills/animate/examples/history-of-ai`, then export it.
 
 ## License
 

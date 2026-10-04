@@ -1,0 +1,62 @@
+#!/usr/bin/env node
+// Put a reference still and a rendered frame side by side at the same height, with a 10% proportion grid,
+// so a look is matched by proportions (element width as % of frame), line weight and palette — not pixels.
+//   usage: node tools/compare.mjs <reference.png|jpg> <piece dir | index.html> <seconds> <out.png> [--crop x,y,w,h] [--no-grid]
+//   --crop takes the reference region to compare (in reference pixels), e.g. one figure out of a page screenshot.
+// Prints both images' palettes (the 6 most common colours, quantised) so they can be compared as numbers.
+import { createRequire } from 'node:module';
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+const require = createRequire(import.meta.url);
+const { chromium } = (() => { try { return require('playwright'); } catch { return require(path.join(execSync('npm root -g').toString().trim(), 'playwright')); } })();
+const args = process.argv.slice(2);
+const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args.splice(i, 2)[1] : null; };
+const flag = (k) => { const i = args.indexOf(k); return i >= 0 ? (args.splice(i, 1), true) : false; };
+const crop = opt('--crop'), noGrid = flag('--no-grid');
+const [ref, src, sec, out] = args;
+if (!ref || !src || sec == null || !out) { console.error('usage: node tools/compare.mjs <reference image> <piece dir | index.html> <seconds> <out.png> [--crop x,y,w,h] [--no-grid]'); process.exit(2); }
+const file = src.endsWith('.html') ? src : path.join(src, 'index.html');
+const mime = /\.jpe?g$/i.test(ref) ? 'image/jpeg' : 'image/png';
+const refURL = `data:${mime};base64,` + fs.readFileSync(ref).toString('base64');   // tool-side only; never in a piece
+const browser = await chromium.launch(), page = await browser.newPage();
+page.on('pageerror', (e) => { console.error('PAGE ERROR:', e.message); process.exitCode = 1; });
+await page.goto(pathToFileURL(path.resolve(file)).href + '?export=1');
+await page.waitForFunction(() => window.TIMELINE && window.renderFrame);
+await page.evaluate(() => document.fonts.ready);
+const res = await page.evaluate(async ([refURL, t, crop, grid]) => {
+  const T = window.TIMELINE, fr = document.createElement('canvas'); fr.width = T.width; fr.height = T.height;
+  window.renderFrame(Math.round(t * T.fps) / T.fps, fr);
+  const img = new Image(); img.src = refURL; await img.decode();
+  const [cx, cy, cw, ch] = crop ? crop.split(',').map(Number) : [0, 0, img.width, img.height];
+  const HH = 960, rw = Math.round(cw * HH / ch), fw = Math.round(T.width * HH / T.height), GAP = 24, HEAD = 44;
+  const c = document.createElement('canvas'); c.width = rw + fw + GAP * 3; c.height = HH + HEAD + GAP; const g = c.getContext('2d');
+  g.fillStyle = '#222'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(img, cx, cy, cw, ch, GAP, HEAD, rw, HH);
+  g.drawImage(fr, GAP * 2 + rw, HEAD, fw, HH);
+  g.fillStyle = '#ddd'; g.font = '600 22px sans-serif';
+  g.fillText('reference', GAP, 30); g.fillText(`ours · t=${t}s`, GAP * 2 + rw, 30);
+  if (grid) {
+    g.strokeStyle = 'rgba(255,0,80,0.35)'; g.lineWidth = 1; g.beginPath();
+    for (const [x0, w] of [[GAP, rw], [GAP * 2 + rw, fw]]) for (let k = 1; k < 10; k++) {
+      g.moveTo(x0 + w * k / 10 + 0.5, HEAD); g.lineTo(x0 + w * k / 10 + 0.5, HEAD + HH);
+      g.moveTo(x0, HEAD + HH * k / 10 + 0.5); g.lineTo(x0 + w, HEAD + HH * k / 10 + 0.5);
+    }
+    g.stroke();
+  }
+  // palettes: the most common colours, quantised to 16 levels per channel
+  const pal = (cv, x, y, w, h) => {
+    const d = cv.getContext('2d').getImageData(x, y, w, h).data, m = new Map();
+    for (let i = 0; i < d.length; i += 16) { const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4); m.set(k, (m.get(k) || 0) + 1); }
+    const n = d.length / 16;
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `rgb(${((k >> 8) & 15) * 16 + 8},${((k >> 4) & 15) * 16 + 8},${(k & 15) * 16 + 8}) ${(v / n * 100).toFixed(1)}%`);
+  };
+  const rc = document.createElement('canvas'); rc.width = cw; rc.height = ch; rc.getContext('2d').drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
+  return { png: c.toDataURL('image/png').split(',')[1], ref: pal(rc, 0, 0, cw, ch), ours: pal(fr, 0, 0, T.width, T.height) };
+}, [refURL, Number(sec), crop, !noGrid]);
+fs.writeFileSync(out, Buffer.from(res.png, 'base64'));
+console.log('compare', out);
+console.log('palette ref :', res.ref.join(' · '));
+console.log('palette ours:', res.ours.join(' · '));
+await browser.close();

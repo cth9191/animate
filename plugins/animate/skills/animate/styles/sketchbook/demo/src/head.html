@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketchbook demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1d1a17; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  SKETCHBOOK DEMO — 9:16, 6.0s @ 120 BPM, 24fps. A puzzled doodle gets an idea: a lightbulb is pencilled in,
+//  inked and scribbled yellow; the bulb becomes the sun over a sketched hill, and the hero waves from the top.
+//  Proves the style kit renders, morphs and stays deterministic.
+//  Build: node <skill>/tools/build.mjs <skill>/styles/sketchbook/demo
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;
+const DURATION = 6.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };
+const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Comic Sans MS", "Chalkboard SE", cursive';
+const CX = 500;
+
+const ERA_LIST = [[0, 3, () => sceneIdea()], [3, 6, () => sceneHill()]];
+const SHOTS = [
+  ['idea', 0, 0.0, 3.0, 'a puzzled doodle; a lightbulb is pencilled in, inked, scribbled yellow'],
+  ['hill', 1, 3.0, 6.0, 'the bulb becomes the sun over a sketched hill; the hero waves from the top'],
+];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'morph-chain',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [],
+  morphs: [3.0],
+  cues: { draw: 0.5, ink: 1.25, fill: 1.5, pop: 2.0, rays: 3.5, house: 3.5, tree: 3.75, hop1: 4.5, hop2: 5.0 },
+  acts: [
+    { name: '1 Idea', role: 'build', t0: 0.0, t1: 3.0 },
+    { name: '2 Hill', role: 'gift', t0: 3.0, t1: 6.0 },
+  ],
+  board: [
+    { t: 1.75, title: 'the bulb is scribbled in', sound: 'pencil scratches on 16ths', next: 'it lights; the bulb becomes the sun' },
+    { t: 5.0, title: 'the sun over the hill', sound: 'warm pad, plucks on the hops', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

@@ -58,7 +58,13 @@ function encodeWav(left, right, sr) {
 
 const MIDI = (m) => 440 * 2 ** ((m - 69) / 12);
 const NOTE = { D2: 38, A2: 45, D3: 50, E3: 52, Fs3: 54, A3: 57, D4: 62, E4: 64, Fs4: 66, G4: 67, A4: 69, B4: 71, Cs5: 73, D5: 74, E5: 76, Fs5: 78, A5: 81, B5: 83, D6: 86, E6: 88, Fs6: 90, A6: 93 };
-const nz = (n) => MIDI(NOTE[n]);
+// any note name: 'D4', 'Fs4' / 'F#4' (sharp), 'Bb3' (flat); the table above is the fast path
+function noteNum(n) {
+  if (NOTE[n] != null) return NOTE[n];
+  const m = /^([A-G])(s|#|b)?(-?\d)$/.exec(n); if (!m) throw new Error(`unknown note "${n}"`);
+  return 12 * (Number(m[3]) + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === 'b' ? -1 : m[2] ? 1 : 0);
+}
+const nz = (n) => MIDI(noteNum(n));
 async function buildScore(sampleRate = 48000, part = 'mix', normIn = null) {
   const TAIL = 3.0, len = Math.ceil((LOOP_T + TAIL) * sampleRate);
   const ac = new OfflineAudioContext(2, len, sampleRate);

@@ -16,7 +16,7 @@ p.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
 p.on('console', (m) => console.error('console:', m.type(), m.text()));
 await p.goto(URL);
 await p.waitForFunction(() => window.TIMELINE, null, { timeout: 30000 });
-console.log('fonts ok:', await p.evaluate(() => window.FONTS_OK));
+{ const fo = await p.evaluate(() => window.FONTS_OK); if (fo !== undefined) console.log('fonts ok:', fo); }
 const res = await p.evaluate(async (frames) => {
   const cols = Math.min(6, frames.length), rows = Math.ceil(frames.length / cols), s = 0.25;
   const g = document.createElement('canvas'); g.width = cols * 270; g.height = rows * 480; const x = g.getContext('2d');

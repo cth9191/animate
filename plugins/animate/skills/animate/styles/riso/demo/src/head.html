@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riso demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1d1a17; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  RISO DEMO — 9:16, 6.0s @ 120 BPM, 24fps. Dawn on a city rooftop: the sun climbs out of the skyline and the
+//  hero stretches to greet it; the sun becomes the best orange in a market crate, and the hero picks it.
+//  Proves the riso kit prints (screens, overprints, misregistration), morphs and stays deterministic.
+//  Build: node <skill>/tools/build.mjs <skill>/styles/riso/demo
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;
+const DURATION = 6.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };
+const PRINTF = '"Arial Black", "Helvetica Neue", "Franklin Gothic Heavy", Impact, "DejaVu Sans", "Liberation Sans", sans-serif';
+const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Comic Sans MS", "Chalkboard SE", cursive';
+const CX = 470;
+
+const ERA_LIST = [[0, 3, () => sceneRoof()], [3, 6, () => sceneMarket()]];
+const SHOTS = [
+  ['roof',   0, 0.0, 3.0, 'dawn on the roof: the sun climbs, the hero stretches'],
+  ['market', 1, 3.0, 6.0, 'the sun becomes an orange; the hero picks it'],
+];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'morph-chain',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [],
+  morphs: [3.0],
+  cues: { stretch: 1.0, wave: 1.5, reach: 3.75, pick: 4.25, hop: 4.75 },
+  acts: [
+    { name: '1 Roof',   role: 'build', t0: 0.0, t1: 3.0 },
+    { name: '2 Market', role: 'gift',  t0: 3.0, t1: 6.0 },
+  ],
+  board: [
+    { t: 1.75, title: 'the sun climbs out of the skyline', sound: 'a warm pad, bird blips', next: 'the sun becomes an orange' },
+    { t: 4.75, title: 'the hero picks the orange', sound: 'a pluck on the pick, a hop', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

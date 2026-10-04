@@ -3,4 +3,7 @@
 **/renders/
 **/review/*-vs-ref.*
 node_modules/
-examples/*/index.html
+__pycache__/
+# built files (tools/build.mjs makes them from src/ + kit/ + the style)
+plugins/**/index.html
+plugins/**/review/

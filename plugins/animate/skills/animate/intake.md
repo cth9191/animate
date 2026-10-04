@@ -18,18 +18,19 @@ Ask only what you can't infer from the request. Batch them into one AskUserQuest
    - Write a voice-over script and time the picture to it (they record or generate the voice)
    - On-screen handwritten narration
 
-4. **References?**
-   - Use a studied style: cut paper / crosshatch ink *(show `styles/*/sample.png`)*
-   - I'll give you links or files (videos or stills) — then run `tools/measure/shotlog.py` on any video, make frame sheets with ffmpeg, and keep reference media local and uncommitted
+4. **The look?** Show the gallery first (`docs/styles.png`, or `node tools/gallery.mjs <out.png> [<project>/styles]`), then ask:
+   - One of these: cut paper / crosshatch ink / riso print / sketchbook / math / pixel *(recommend the one that fits the subject: cut paper for histories and stories, crosshatch for Claude Code explainers, math for anything with equations or graphs, pixel for computing history, riso or sketchbook for a softer editorial feel)*
+   - A style they've made before (any `styles/<name>/` in their project)
+   - My own references — links or files (videos, stills, a web page): follow [new-style.md](new-style.md); keep the media local and uncommitted
    - Surprise me
 
 5. **A hero?** *(ask only if the format wants one)*
-   - The spark (a small orange character that grows with the story) *(recommended for histories)*
+   - The style's hero (cut paper: the spark, a small orange character that grows with the story; crosshatch: an ink dot with eyes; …) *(recommended)*
    - An existing character (describe it)
    - No hero — the subject itself is the constant
 
 ## Defaults when unanswered
-9:16, 1080×1920, 24fps, 120 BPM (an 8th = 6 frames exactly), 30–60s, music only, cut-paper look, the spark as hero, format chosen from FORMATS.md by the plot engine.
+9:16, 1080×1920, 24fps, 120 BPM (an 8th = 6 frames exactly), 30–60s, music only, the style that fits the subject (cut paper if unsure), the style's own hero, format chosen from FORMATS.md by the plot engine.
 
 ## Pick the format yourself
 Don't ask the user to choose a format — it's grammar, not taste. A history or a process over time → chronology joined by shape morphs (F2). Someone wants something and a helper solves it → mission, cut on the beat (F4). One carried thing through many places → fixed-hero journey (F5). A question answered by a list → catalogue (F3). State the choice at the story check so they can veto it.

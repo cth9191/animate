@@ -1,10 +1,9 @@
 // =====================================================================
-//  kit/paper.js — the cut-paper look: torn-edge cutouts with drop shadows, paper grain, crayon, patterns;
+//  styles/cut-paper/kit.js — the cut-paper look: torn-edge cutouts with drop shadows, paper grain, crayon, patterns;
 //  faces with moods; THE SPARK (a hero: an orange starburst with a face; idle bob, blinks, ray sway);
-//  people, hands, props (clock, cat, mug, plant, books), paper tags; time helpers for animation.
-//  Needs from the piece head: HAND (font stack), CX (caption centre x). Built on kit/core.js.
-//  Time: TT = on-2s absolute time (set by the renderer). ev(t, d) = 0..1 progress of an event at t;
-//  popS(t) = back-eased pop-in scale; handText(..., { frac }) writes text on.
+//  people, hands, props (clock, cat, mug, plant, books), paper tags (year tag, caption strip).
+//  Needs from the piece head: HAND (font stack), CX (caption centre x). Built on kit/core.js (time helpers live there).
+//  handText(..., { frac }) writes text on. STYLE (at the end) is what the renderer (kit/morph.js) calls.
 // =====================================================================
 // =====================================================================
 const PAL = {
@@ -15,10 +14,6 @@ const PAL = {
   skin1: '#efc19e', skin2: '#c68a62', skin3: '#8a5638', grey: '#8a8590', charcoal: '#4a4550', brick: '#b98576',
 };
 const HANDF = HAND;
-// ---- time: TT = on-2s absolute time; E0 = the current era's start; DEFER = overlay queue; SPARK_AT = hero's screen spot
-let TT = 0, E0 = 0, DEFER = null, SPARK_AT = null;
-const ev = (t, d = 0.25) => clamp((TT - t) / d);
-const popS = (t) => (TT < t ? 0 : EZ.back(clamp((TT - t) / 0.25)));
 function handText(str, x, y, size, color, o = {}) {
   ctx.save();
   const R = RNG('ht', o.key ?? str, B);
@@ -182,3 +177,29 @@ function tag(str, x, y, size, o = {}) {   // a torn paper tag with handwriting
 }
 const yearTag = (str) => { const f = () => tag(str, 70 + (handW(str, 80) + 72) / 2, 330, 80, { rot: -0.04, s: popS(E0 + 0.2) }); if (DEFER) DEFER.push(f); else f(); };
 const capStrip = (str) => { const f = () => tag(str, CX, 1440, 50, { rot: 0.012, tape: false, frac: ev(E0 + 0.45, 0.6) }); if (DEFER) DEFER.push(f); else f(); };
+
+// =====================================================================
+//  STYLE — the hooks the renderer (kit/morph.js) calls. Every styles/<name>/kit.js defines one.
+//    paper            the blank sheet a morph happens on
+//    backdrop(c)      fill the frame with colour c (behind a morph window)
+//    window(P, key, src)  draw canvas src seen through outline P (screen coords): here a torn paper hole
+//    blob(P, c, key)  the morphing shape itself, outline P, colour c
+//    hero(x, y, r, o) the hero drawn by hero-to-hero bridges (SP(...) shapes); heroColor / heroPts for its outline
+//    post()           after every frame (grain, print pass, upscale ...)
+//    ones             true = motion on 1s (TT = every frame); default on 2s
+// =====================================================================
+const STYLE = {
+  name: 'cut-paper',
+  paper: '#efe5cf',
+  backdrop(c) { cut(rect(-30, -30, W + 60, H + 60, 0), c, { key: 'backdrop', shadow: false, tear: 0, grain: 0.8, shade: false }); },
+  window(P, key, src) {   // the world seen through a hand-cut window: torn edge, paper rim, shadow
+    const Q = torn(wobble(P, true, 3, key, 9), key, 2.4);
+    ctx.save(); ctx.shadowColor = 'rgba(35,20,10,0.35)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6; trace(Q, true); ctx.fillStyle = STYLE.paper; ctx.fill(); ctx.restore();
+    ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(src, 0, 0); ctx.restore();
+    ctx.save(); trace(Q, true); ctx.strokeStyle = '#fbf6ea'; ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore();
+  },
+  blob(P, c, key) { cut(P, c, { key, tear: 1.0, amt: 1.2 }); },
+  hero(x, y, r, o) { spark(x, y, r, o); },
+  heroColor: PAL.orange,
+  post() { grain({ n: 3000 }); },
+};

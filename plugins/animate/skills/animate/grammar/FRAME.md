@@ -1,25 +1,26 @@
 # What goes in a frame
 
-[STORY.md](STORY.md) and [FORMATS.md](FORMATS.md) cover structure: beats, pacing, transitions, sound. This file covers what a single key frame holds.
+[STORY.md](STORY.md) and [FORMATS.md](FORMATS.md) cover structure: beats, pacing, transitions, sound. This file covers what a single key frame holds, in **any** style. Each style adds its own checklist in its `STYLE.md` (cut paper wants faces and background life; math wants one idea per frame and colour-coded variables; pixel wants every edge on the pixel grid).
 
-It exists because a storyboard drawn as labelled diagrams on blank paper came back "pretty boring" — correct beats, no life. Comparing it against strong reference frames made the gap obvious.
+It exists because a storyboard drawn as correct-but-plain labelled diagrams came back "pretty boring" — right beats, no life. Comparing it against strong reference frames made the gap obvious.
 
-**Before drawing any storyboard or style frame, open 2–4 reference frames in the target look, then check every panel against this list.**
+**Before drawing any storyboard or style frame, open 2–4 reference frames in the target look (the user's references, or the style's `sample.png` and demo), then check every panel against this list and the style's checklist.**
 
-## The checklist (every key frame)
+## The universal checklist (every key frame, every style)
 
-1. **A character with a face, acting.** Almost every frame has a hero with eyes and a mood — a hatchling, a small helper creature, an animal, a person, the spark. Things happen *to* the character, and it reacts (wow, sad, delighted, focused). A diagram is not a character.
-2. **A full-bleed world.** The whole 9:16 is a place: wallpaper, sky, a table, gingham, a starry night, or a flat colour card that sets the beat's mood. Never an object floating on blank paper, unless blank is the point (a white page used as a *stage*, with a ground line, a sun and plants).
-3. **The medium shows.** Cut paper with torn edges and soft drop shadows; crayon or pencil texture in the fills; patterns (stripes, dots, gingham, plaid, quilting). Flat vector fills read as clip art.
-4. **Small life in the background:** 3 or more secondary details per frame that don't carry the plot but make the world lived-in — a sleeping cat, birds on a wire, a moth at the lamp, steam from a mug, confetti, a clock, sticky notes, bunting, dragonflies, ferns.
-5. **The idea is acted out literally.** "AI winter" is snow falling on a closed lab, with an empty piggy bank. "Everyone says hi" is a storm of chat bubbles and phones held up. Not a label.
-6. **Text lives in the world.** Words on a note, a sign, a tag or a screen, hand-lettered. One short caption per beat at most.
-7. **Scale varies across the board:** wides, mid shots, and at least one extreme close-up (an eye, a clock, a hand holding a phone). A board where every panel uses the same framing is a slideshow.
-8. **A recurring thread across frames:** a callback prop or critter (a survivor colour, a balloon, a cat that shows up in every era, a framed page from the first scene).
+1. **One constant the eye can hold.** A hero, a stage, a silhouette or a page that stays while everything else changes. In character styles it's a hero with a face and a mood; in diagram styles it's the object or the axes.
+2. **Colour means one thing.** One reserved colour for the thing the story follows (the hero, the variable, the focus), never spent on decoration.
+3. **The medium shows.** Whatever the medium is — torn paper, hatching, halftone dots, graphite, pixels — it's visible at phone size in every frame. A frame that could be any style is clip art.
+4. **The idea is acted out, not labelled.** "AI winter" is snow on a closed lab; "the cache warms up" is the slow path going dark while the fast one lights. A caption can name it; the picture has to show it.
+5. **Something is happening.** A frame is a moment of a change: mid-move, mid-reaction, mid-build. Held frames still have idle life (a blink, a bob, steam, a blinking LED, a cursor).
+6. **Text lives in the world or is set like the style's own type.** On a note, a sign, a tag, a screen, a face of an object, or as typeset math. One short caption per beat at most, ≥ 50px at 1080 wide.
+7. **Scale varies across the board.** Wides, mid shots and at least one extreme close-up. A board where every panel uses the same framing is a slideshow.
+8. **A recurring thread across frames:** a callback prop, a critter, a colour, a shape that comes back changed.
+9. **Phone-safe:** on 9:16, what matters sits inside x 60–940, y 250–1500 (the platform UI covers the rest); anything that matters is ≥ ~100px.
 
 ## A hero device for long time spans
 
-Give "the idea" a body: **the spark** (`kit/paper.js`), an orange starburst with a face. It gains a ray per era and can end as the thing the story arrives at. Reserve its colour for it alone.
+Give "the idea" a body. Each style has a hero in its kit (cut paper: the spark, which gains a ray per era; crosshatch: an ink dot with eyes; pixel: a sprite with a two-frame idle; math: a π character beside the graph). Reserve its colour for it alone.
 
 ## Process
 

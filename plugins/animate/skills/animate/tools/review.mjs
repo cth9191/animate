@@ -20,6 +20,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { GPU_ARGS, gpuReport } from './gpu.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = (() => { try { return require('playwright'); } catch { return require(path.join(execSync('npm root -g').toString().trim(), 'playwright')); } })();
@@ -44,8 +45,9 @@ await page.waitForFunction(() => window.TIMELINE);
 // WebGL pieces (TIMELINE.gpu) re-open on the real GPU: the anchor pass renders hundreds of frames
 if (await page.evaluate(() => !!window.TIMELINE.gpu)) {
   await browser.close();
-  browser = await chromium.launch({ args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] });
+  browser = await chromium.launch({ args: GPU_ARGS });
   page = await browser.newPage();
+  await gpuReport(page);
   await page.goto(PAGE_URL);
   await page.waitForFunction(() => window.TIMELINE && window.renderFrame);
 }

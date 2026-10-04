@@ -25,7 +25,7 @@ const DURATION = 8.0;
 const NFRAMES = Math.round(DURATION * FPS);
 const LOOP_T = NFRAMES / FPS;
 const SAFE = { top: 240, bottom: 420, right: 140 };          // 9:16 platform UI; keep content in x 60–940, y 250–1500
-const HAND = '"Ink Free", "Segoe Print", "Comic Sans MS", cursive';   // a local handwriting font
+const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive';   // local handwriting fonts: Windows, macOS, Linux
 const CX = 470;                                               // caption centre (left of the right-hand UI strip)
 
 // eras: [t0, t1, scene]. Boundaries with a BRIDGE (src/bridges.js) morph; the rest are hard cuts.

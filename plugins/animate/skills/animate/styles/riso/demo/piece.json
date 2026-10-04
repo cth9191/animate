@@ -1,0 +1,8 @@
+{
+  "name": "riso-demo",
+  "title": "Riso demo",
+  "format": { "width": 1080, "height": 1920, "fps": 24, "bpm": 120, "duration": 6.0, "frames": 144 },
+  "storyFormat": "morph chain (2 eras, 1 shape morph)",
+  "style": "riso",
+  "review": { "safe": { "top": 240, "bottom": 420, "right": 140 }, "refs": {} }
+}

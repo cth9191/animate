@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cut paper demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1714; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  CUT PAPER DEMO — 9:16, 8.0s @ 120 BPM, 24fps. Two eras joined by one shape morph (the moon becomes the sun).
+//  Replace the eras, shots, cues, acts and board with your piece's. Build: node <skill>/tools/build.mjs <this piece dir>
+//  Open index.html in a browser to preview (click to hear the score; ?t=2.5 freezes a frame).
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;   // 0.5 / 0.25 / 0.125s = 12 / 6 / 3 frames
+const DURATION = 8.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };          // 9:16 platform UI; keep content in x 60–940, y 250–1500
+const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive';   // local handwriting fonts: Windows, macOS, Linux
+const CX = 470;                                               // caption centre (left of the right-hand UI strip)
+
+// eras: [t0, t1, scene]. Boundaries with a BRIDGE (src/bridges.js) morph; the rest are hard cuts.
+const ERA_LIST = [[0, 4, () => sceneNight()], [4, 8, () => sceneMorning()]];
+const SHOTS = [
+  //  key        era  t0    t1    title
+  ['night',      0,   0.0,  4.0,  'the spark wakes up'],
+  ['morning',    1,   4.0,  8.0,  'the moon becomes the sun; the garden grows'],
+];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'morph-chain',   // 'F2' adds the fixed-stage checks (a year counter, a still stage); 'F4' adds the mission checks
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [],              // hard cuts (seconds, on the 8th grid)
+  morphs: [4.0],         // morph bridge centres (seconds, on the 8th grid)
+  cues: { wake: 1.0, flowers: 4.75 },
+  acts: [
+    { name: '1 Night',   role: 'build', t0: 0.0, t1: 4.0 },
+    { name: '2 Morning', role: 'gift',  t0: 4.0, t1: 8.0 },
+  ],
+  // the storyboard: one key frame per beat
+  board: [
+    { t: 2.5, title: 'the spark wakes', sound: 'a soft pad; a rising fifth', next: 'the moon becomes the sun' },
+    { t: 7.0, title: 'the garden', sound: 'a warm chord', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

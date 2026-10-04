@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crosshatch demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1714; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  CROSSHATCH DEMO — 9:16, 6.0s @ 120 BPM, 24fps. A desk by morning; the coffee in the mug becomes the moon
+//  over the navy world inside the machine. Proves the style kit renders, morphs and stays deterministic.
+//  Build: node <skill>/tools/build.mjs <skill>/styles/crosshatch/demo
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;
+const DURATION = 6.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };
+const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive';   // local handwriting fonts: Windows, macOS, Linux
+const CX = 470;
+
+const ERA_LIST = [[0, 3, () => sceneDesk()], [3, 6, () => sceneInside()]];
+const SHOTS = [
+  ['desk',   0, 0.0, 3.0, 'a desk by morning: the hero reads its notes'],
+  ['inside', 1, 3.0, 6.0, 'the coffee becomes the moon over the machine'],
+];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'morph-chain',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [],
+  morphs: [3.0],
+  cues: { read: 0.75, plan: 1.25, type: 3.75 },
+  acts: [
+    { name: '1 Desk',   role: 'build', t0: 0.0, t1: 3.0 },
+    { name: '2 Inside', role: 'gift',  t0: 3.0, t1: 6.0 },
+  ],
+  board: [
+    { t: 1.8, title: 'reading the notes', sound: 'pencil scratch, a pluck', next: 'the coffee becomes the moon' },
+    { t: 5.0, title: 'inside the machine', sound: 'a low pad, typing blips', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;
