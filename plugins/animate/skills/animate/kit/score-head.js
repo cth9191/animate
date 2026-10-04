@@ -94,7 +94,8 @@ async function buildScore(sampleRate = 48000, part = 'mix', normIn = null) {
   const noise = makeNoise(ac, 3.0);
   let to = 'm';   // which bus the helpers below write to
 
-  const env = (g, t, a, peak, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
+  // the gain is silent until the envelope starts (a GainNode defaults to 1: a note whose oscillator starts first would click)
+  const env = (g, t, a, peak, d) => { g.gain.value = 0.0001; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
   const out = (node, pan = 0, send = 0) => {
     const p = ac.createStereoPanner(); p.pan.value = clamp(pan, -1, 1); node.connect(p); p.connect(to === 'm' ? duck : sfxBus);
     if (send) { const s = ac.createGain(); s.gain.value = send; node.connect(s); s.connect(verbs[to]); }
@@ -137,7 +138,7 @@ async function buildScore(sampleRate = 48000, part = 'mix', normIn = null) {
     sweep(t0, t1, vel * 0.9, 400, 7000);
   }
   function chime(t, freqs, vel, pan = 0) {
-    freqs.forEach((f, i) => { const g = ac.createGain(); env(g, t + i * 0.012, 0.002, vel / (1 + i * 0.4), 1.3); osc('sine', f, t, t + 1.5).connect(g); out(g, pan + (i - 1) * 0.25, 0.6); });
+    freqs.forEach((f, i) => { const g = ac.createGain(), ti = t + i * 0.012; env(g, ti, 0.002, vel / (1 + i * 0.4), 1.3); osc('sine', f, ti, ti + 1.5).connect(g); out(g, pan + (i - 1) * 0.25, 0.6); });
   }
   function bass(t, f, vel) { const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 320; const g = ac.createGain(); env(g, t, 0.006, vel, 0.28); osc('triangle', f, t, t + 0.35).connect(lp); lp.connect(g); out(g); }
   function blip(t, f0, f1, dur, vel, pan = 0) { const o = osc('sine', f0, t, t + dur + 0.05); o.frequency.exponentialRampToValueAtTime(f1, t + dur); const g = ac.createGain(); env(g, t, 0.002, vel, dur); o.connect(g); out(g, pan, 0.2); }

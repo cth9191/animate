@@ -54,7 +54,10 @@ export async function textCheck(page, o = {}) {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const issues = new Map(), add = (kind, text, t) => { const k = kind + '|' + text; const v = issues.get(k); if (v) { v.t1 = t; v.n++; } else issues.set(k, { kind, text, t0: t, t1: t, n: 1 }); };
     let frames = 0;
-    for (let f = 0; f < T.frames; f += every) {
+    // every Nth frame, plus the first and last frame of every shot (a 3-frame shot is never skipped)
+    const fs = new Set(); for (let f = 0; f < T.frames; f += every) fs.add(f);
+    for (const sh of T.shots || []) { const a = Math.round(sh.t0 * T.fps), b = Math.round(sh.t1 * T.fps) - 1; if (a < T.frames) fs.add(a); if (b >= a && b < T.frames) fs.add(b); }
+    for (const f of [...fs].sort((x, y) => x - y)) {
       const t = f / T.fps; if (inBridge(t)) continue;
       rec.length = 0; window.renderFrame(t, cv); frames++;
       const seen = new Map();
@@ -62,7 +65,8 @@ export async function textCheck(page, o = {}) {
       const boxes = [...seen.values()].filter((b) => b.x1 - b.x0 > 2 && b.y1 - b.y0 > 2);
       for (const b of boxes) {
         const label = b.s.length > 40 ? b.s.slice(0, 40) + '…' : b.s;
-        if (b.x0 < -3 || b.y0 < -3 || b.x1 > W + 3 || b.y1 > H + 3) add('cut off by the frame edge', label, t);
+        // single characters (a 'z' over a sleeping cat, a '?') are decoration a close-up may crop; words are not
+        if (b.s.trim().length > 1 && (b.x0 < -3 || b.y0 < -3 || b.x1 > W + 3 || b.y1 > H + 3)) add('cut off by the frame edge', label, t);
         else if (safe && (b.y1 > H - safe.bottom + 2 || (b.x1 > W - safe.right + 2 && b.y1 > safe.top && b.y0 < H - safe.bottom)) && b.y0 > safe.top) add('under the phone UI (safe zone)', label, t);
       }
       for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beat-cut starter</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1714; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  BEAT-CUT STARTER — 9:16, 6.0s @ 120 BPM, 24fps. Hard cuts on the beat grid, no morphs (BRIDGES = []):
+//  held shots, then 8ths, then a rush of 16ths (3 frames each, some on odd frames), then a held payoff.
+//  One era per shot; a shot's framing comes from pieceCam() in src/bridges.js. Every era boundary is a hard cut.
+//  Replace the scenes with your piece's (copy src/ from a style's demo for any style but cut paper).
+//  Rules for beat-cut pieces (craft.md): what defines a shot is fully drawn on its first frame — captions and
+//  tags in shots shorter than ~1s must not pop in late; list every cut in TIMELINE.cuts.
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;   // 0.5 / 0.25 / 0.125s = 12 / 6 / 3 frames
+const DURATION = 6.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };
+const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive';
+const CX = 470;
+
+// the shot list: [t0, scene, camera]. 'wide' | 'close' | 'xclose' are defined in src/bridges.js
+const SHOT_LIST = [
+  [0.0,   'night',   'wide'],     // hold 2 beats
+  [1.0,   'morning', 'wide'],     // 8ths from here
+  [1.5,   'night',   'close'],
+  [2.0,   'morning', 'close'],
+  [2.5,   'night',   'xclose'],   // 16ths: 3 frames each (f60, f63, f66, f69 — two of them on odd frames)
+  [2.625, 'morning', 'xclose'],
+  [2.75,  'night',   'xclose'],
+  [2.875, 'morning', 'xclose'],
+  [3.0,   'morning', 'wide'],     // the payoff, held
+];
+const SCENE = { night: () => sceneNight(), morning: () => sceneMorning() };
+const ERA_LIST = SHOT_LIST.map(([t0, sc], i) => [t0, i + 1 < SHOT_LIST.length ? SHOT_LIST[i + 1][0] : DURATION, SCENE[sc]]);
+const SHOTS = SHOT_LIST.map(([t0, sc, cam], i) => [sc + '-' + cam, i, t0, ERA_LIST[i][1], `${sc} (${cam})`]);
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'beat-cut',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: SHOT_LIST.slice(1).map(([t0]) => t0),   // every era boundary is a hard cut
+  fastFrom: 2.5, fastTo: 3.0,                    // 16th-note grid inside [fastFrom, fastTo)
+  morphs: [],
+  cues: { wake: 0.5, flowers: 3.25 },
+  acts: [
+    { name: '1 Hold',    role: 'build',   t0: 0.0, t1: 1.0 },
+    { name: '2 Cuts',    role: 'journey', t0: 1.0, t1: 2.5 },
+    { name: '3 Rush',    role: 'peak',    t0: 2.5, t1: 3.0 },
+    { name: '4 Payoff',  role: 'gift',    t0: 3.0, t1: 6.0 },
+  ],
+  board: [
+    { t: 0.6, title: 'the hold', sound: 'a soft pad', next: 'cut on the beat' },
+    { t: 2.55, title: 'the rush', sound: 'a hit on every 16th', next: 'cut to the payoff' },
+    { t: 4.5, title: 'the payoff', sound: 'the loudest chord', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

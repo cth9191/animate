@@ -1,0 +1,8 @@
+{
+  "name": "beat-cut-starter",
+  "title": "Beat-cut starter",
+  "format": { "width": 1080, "height": 1920, "fps": 24, "bpm": 120, "duration": 6.0, "frames": 144 },
+  "storyFormat": "beat-cut (held shots, 8ths, a 16th rush, a held payoff)",
+  "style": "cut-paper",
+  "review": { "safe": { "top": 240, "bottom": 420, "right": 140 }, "refs": {} }
+}

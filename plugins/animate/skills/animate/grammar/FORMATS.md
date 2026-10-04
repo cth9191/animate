@@ -18,7 +18,7 @@ Every piece is one choice from each column. Read a format as a proven combinatio
 | **claims → proof:** a card says it, footage shows it | | | |
 
 **How the columns couple** (no exceptions in the study):
-- **Spatial plots get a follow-camera.** When the plot is a *path* (stations, a machine), the camera travels one sheet and never cuts.
+- **Spatial plots get a follow-camera.** When the plot is a *path* (stations, a machine), the camera travels one sheet and never cuts. (F1 is still unproven: when a chronology or a fixed-hero journey tells the same process, prefer the proven card and say so.)
 - **Chronologies transition from the scene.** Time passing — on one stage or across many worlds — is joined by morphs and draw-offs, not cuts.
 - **Characters and lists get cuts on the beat.** A story with several places/people, or a catalogue, cuts held frames on a music grid.
 - **A voice takes over the clock.** Narrated pieces drop the beat grid and change picture on sentence ends; the music sits under at −20 to −25 dB.

@@ -37,7 +37,7 @@ Pick the **format** from [grammar/FORMATS.md](grammar/FORMATS.md) — the plot e
 Ask: **approve / change beats / different angle.** Revise until approved. This is where "I meant X, not Y" gets caught cheaply.
 
 ### 2. Look check (2–4 style frames)
-Start the piece at `pieces/<name>/`: copy `piece.json` and `src/` from the style's demo (`styles/<name>/demo/`) — it already speaks the style's kit — or from [templates/piece/](templates/piece/) for cut paper. Set `"style"` in `piece.json`, then write `brief.md` and `LOG.md` fresh (the template's are placeholders).
+Start the piece at `pieces/<name>/`: copy `piece.json` and `src/` from the style's demo (`styles/<name>/demo/`) — it already speaks the style's kit and joins eras with a morph — or from [templates/beat-cut/](templates/beat-cut/) for a piece that cuts hard on the beat (8ths, a 16th-note rush on odd frames, one era per shot, framings from cameras), or [templates/piece/](templates/piece/) for the plainest cut-paper morph. Set `"style"` in `piece.json`, then write `brief.md` and `LOG.md` fresh (the template's are placeholders).
 - **A shipped style:** read its `STYLE.md` and demo and draw with its kit.
 - **The user's references:** follow [new-style.md](new-style.md). Measure the references first (`tools/measure/refs.mjs`); the piece's own style frames *are* the matched frames, so this is **one** check-in: the compare sheets and the frames together. Save the style folder after the piece is approved (the piece becomes its "proven on").
 
@@ -64,7 +64,7 @@ After each run append to the piece's `LOG.md`. If something new went wrong or wo
 ## Parallel agents (long pieces)
 
 A 45–60s piece has 10–15 scenes; split the drawing across agents once the storyboard is approved:
-- **One `src/` file per section or era, owned by one agent** (`src/era-01.js`, `src/era-02.js`, …). List them in `piece.json` `"build"` in order, between the style and `src/bridges.js`.
+- **One `src/` file per section or era, owned by one agent** (`src/era-01.js`, `src/era-02.js`, …). List them in `piece.json` `"scenes": [...]`; they take the place of `src/scenes.js` in the build order.
 - **The shared parts stay with you:** `src/head.html` (TIMELINE, eras, shots, cues), `src/bridges.js`, the score, and the kit. Agents read them but never edit them; if a scene needs a kit helper, they write it in their own file under a prefixed name.
 - **Brief each agent** with the approved board panel(s), the style's `STYLE.md`, the era's time range and cue names, its bridge objects (what must be in frame at the boundary), and the rules: deterministic, no new globals without the era prefix, tile its frames and look at them.
 - **`build.mjs` joins them**; you build, tile across every boundary, and run the review.
@@ -84,7 +84,7 @@ A 45–60s piece has 10–15 scenes; split the drawing across agents once the st
 | `kit/morph.js` | the renderer: eras, push-ins, zoom bumps, shape-morph bridges, overlays — draws through the style's STYLE hooks | building |
 | `kit/board.js` | the storyboard renderer | steps 2–3 |
 | `kit/score-*.js` | synth (pluck, pad, drone, bass, sub, noiseHit, sweep, riser, chime, blip), loudness stage | scoring |
-| [templates/piece/](templates/piece/) | a working 8s starter piece | step 2 |
+| [templates/](templates/) | `piece/` (an 8s cut-paper morph), `beat-cut/` (a 6s hard-cut piece with a 16th rush), `style/` (a blank style kit for new looks) | step 2 |
 | `tools/` | build, tile, still, storyboard, export, review, textcheck, compare (reference vs frame), gallery, framehash (pixel-identity check); `measure/` for references (`refs.mjs` for stills, `shotlog.py` for video) | throughout |
 | [examples/history-of-ai/](examples/history-of-ai/) | a full 60s worked example (cut paper) | when unsure how something fits |
 

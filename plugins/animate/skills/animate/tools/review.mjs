@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Review pass for pieces/<name>/renders/final.mp4
-//   1. per-shot contact sheets (every 0.25s) beside the reference images listed in piece.json
+//   1. per-shot contact sheets (every 0.25s); beside the reference images listed in piece.json, those side-by-sides
+//      go to references/_review/<piece>/ (they hold reference pixels; references/ stays gitignored)
 //      (vertical pieces get the phone-UI safe zones drawn in red)
-//   2. cut timing: every TIMELINE cut vs its beat grid (8ths, or 16ths from TIMELINE.fastFrom), confirmed by pixel difference
+//   2. cut timing: every TIMELINE cut vs its beat grid (8ths, or 16ths inside [TIMELINE.fastFrom, fastTo)), confirmed by pixel difference
 //   3. pacing summary, on-2s montage check, flat-frame scan, loop check
 //   4. narration (if TIMELINE.narration): words per second per line, and whether each stressed word lands on a cut
 //   5. story arc (if TIMELINE.acts): per-act cut rate, motion and loudness (mix + music stem), checked against the
@@ -118,7 +119,9 @@ for (const shot of T.shots) {
   const refs = (REF_FOR[shot.id] || []).map(refPath).filter((p) => fs.existsSync(p));
   const sheetW = cellW * cols, sheetH = cellH * rows;
   if (refs.length) {
-    const out = path.join(REVIEW, `${tag}-vs-ref.jpg`);
+    // the side-by-side holds reference pixels: it goes in the (gitignored) references/ folder, never in the piece
+    const VSREF = path.join(REFDIR, '_review', path.basename(ROOT)); fs.mkdirSync(VSREF, { recursive: true });
+    const out = path.join(VSREF, `${tag}-vs-ref.jpg`);
     const probeH = refs.map((p) => {
       const o = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', p]).stdout.toString().trim().split(',').map(Number);
       return Math.round((540 * o[1]) / o[0] / 2) * 2;
@@ -131,14 +134,14 @@ for (const shot of T.shots) {
       '-frames:v', '1', '-q:v', '3', out], { stdio: 'inherit' });
     if (r.status !== 0) throw new Error('side-by-side failed for shot ' + shot.id);
   }
-  console.log(`shot ${shot.id} (${shot.title}): ${uniq.length} frames [${uniq.join(',')}] -> review/${tag}-${refs.length ? 'vs-ref' : 'sheet'}.jpg`);
+  console.log(`shot ${shot.id} (${shot.title}): ${uniq.length} frames [${uniq.join(',')}] -> review/${tag}-sheet.jpg${refs.length ? ` + references/_review/${path.basename(ROOT)}/${tag}-vs-ref.jpg` : ''}`);
 }
 
 // ---- cut timing
 const irisEnds = (T.cues?.irisClose || []).map(([, e]) => e);
 const E8 = 30 / (T.bpm || 100), E16 = E8 / 2;
-const gridFor = (c) => (T.fastFrom != null && c >= T.fastFrom - 1e-6 ? E16 : E8);
-console.log(`\nCUTS vs beat grid @ ${T.bpm || 100} BPM, ${T.fps}fps (8ths = ${+E8.toFixed(4)}s${T.fastFrom != null ? `; 16ths = ${+E16.toFixed(4)}s allowed from ${T.fastFrom}s` : ''})`);
+const gridFor = (c) => (T.fastFrom != null && c >= T.fastFrom - 1e-6 && (T.fastTo == null || c < T.fastTo - 1e-6) ? E16 : E8);   // 16ths inside [fastFrom, fastTo)
+console.log(`\nCUTS vs beat grid @ ${T.bpm || 100} BPM, ${T.fps}fps (8ths = ${+E8.toFixed(4)}s${T.fastFrom != null ? `; 16ths = ${+E16.toFixed(4)}s allowed from ${T.fastFrom}s${T.fastTo != null ? ` to ${T.fastTo}s` : ''}` : ''})`);
 console.log(' #   cut t     grid  grid#   nominal f  cut f   cut f t     err(f)  Δ@cut  peak(±2f)          shot change           result');
 let allPass = true;
 T.cuts.forEach((c, i) => {

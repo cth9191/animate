@@ -38,12 +38,15 @@ Each rule was learned the hard way on a real piece. Follow them unless the user 
 - **Pin the hero in the fastest stretch** by centring zoom bumps on it; `review.mjs` checks the anchor.
 - **Hard cuts land on finished frames:** what defines the new shot is fully drawn on its first frame; write-ons start a few frames early.
 - **What existed before the step is on screen from frame 0.** Only the step's own effects animate in (the files were staged before `git commit`; they don't pop in during it).
+- **Beat-cut pieces: a shot is complete on its first frame.** Tags and captions that pop or write on after `E0` never appear in shots under ~1s; give short shots no caption, or draw it finished. Cuts on 16ths land on odd frames at 24fps — the renderer picks the era by frame, so they're exact (start from `templates/beat-cut/`).
 - **Captions hold:** each on screen ≥ 1.25s and ≤ 3.5 words/s; pop the year tag, write the caption on just after.
 
 ## Timing
 - **24fps + 120 BPM:** an 8th = 6 frames, a 16th = 3 — every cut and morph is a whole frame. (30fps → 112.5 BPM; 60fps → 900/7 BPM.)
 - **Cuts and morph centres on the 8th grid**, proven by `review.mjs`, not by eye.
 - **Loop length = NFRAMES / FPS** so the loop point sits on the frame grid; fold the audio tail over the start.
+
+- **Act roles** (`TIMELINE.acts[].role`, read by `review.mjs` → STORY ARC): `build`, `journey`, `peak` (the busiest), `silence` (the drop before the turn), `gift` (the payoff: the loudest), `goodbye` (the decay). Leave a role out when the piece has no such act.
 
 ## Sound
 - **The score improves with the story** (thin early, fullest at the peak); motifs carry characters (the spark = a rising fifth).

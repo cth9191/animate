@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Assemble <piece>/index.html from the piece's src/ parts, this skill's kit/ and the piece's style kit, then check it.
 //   usage: node tools/build.mjs <piece dir>
-// Order comes from <piece>/piece.json "build", default:
+// Order comes from <piece>/piece.json "build" (the whole list) or "scenes" (replaces src/scenes.js only), default:
 //   head, kit/core, style, scenes, bridges, kit/morph (the renderer), kit/board, kit/score-head, score, kit/score-tail
 // Part names:
 //   "kit/<file>"            this skill's kit/
@@ -44,7 +44,8 @@ function resolve(p) {
   if (m && !fs.existsSync(path.join(ROOT, p))) return path.join(styleDir(m[1]), m[2]);
   return path.join(ROOT, p);
 }
-const parts = meta.build || DEFAULT;
+// "scenes": ["src/era-01.js", ...] swaps src/scenes.js for several files in the default order (one per agent / era)
+const parts = meta.build || (meta.scenes ? DEFAULT.flatMap((p) => (p === 'src/scenes.js' ? meta.scenes : [p])) : DEFAULT);
 let out = '';
 for (const p of parts) {
   const file = resolve(p);

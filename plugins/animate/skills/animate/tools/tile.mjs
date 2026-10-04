@@ -1,4 +1,5 @@
-// test tile: render chosen frames into a grid (each 270x480) with the phone-UI safe zones drawn in red; print timings + determinism
+// test tile: render chosen frames into a grid (each 270x480) with the phone-UI safe zones drawn in red; print timings +
+// determinism (every frame rendered twice, the second pass in reverse order; any difference is listed)
 // usage: node tools/tile.mjs <piece dir> out.png f0 f1 f2 ...   (frame numbers at TIMELINE.fps)
 //        (the older form PIECE=<piece dir> node tools/tile.mjs out.png f0 ... still works)
 import { createRequire } from 'node:module';
@@ -25,17 +26,18 @@ await p.waitForFunction(() => window.TIMELINE, null, { timeout: 30000 });
 const res = await p.evaluate(async (frames) => {
   const cols = Math.min(6, frames.length), rows = Math.ceil(frames.length / cols), s = 0.25;
   const g = document.createElement('canvas'); g.width = cols * 270; g.height = rows * 480; const x = g.getContext('2d');
-  const src = document.getElementById('c'); const ms = [];
+  const src = document.getElementById('c'); const ms = [], first = [];
   for (let i = 0; i < frames.length; i++) {
     const t0 = performance.now(); window.renderFrame(frames[i] / window.TIMELINE.fps); ms.push(performance.now() - t0);
     const cx = (i % cols) * 270, cy = Math.floor(i / cols) * 480;
-    x.drawImage(src, cx, cy, 270, 480);
+    first.push(src.toDataURL()); x.drawImage(src, cx, cy, 270, 480);
     x.fillStyle = 'rgba(255,0,0,0.18)'; x.fillRect(cx, cy + 1540 * s, 270, 380 * s); x.fillRect(cx + 950 * s, cy, 130 * s, 480);
     x.fillStyle = '#000'; x.fillRect(cx, cy, 44, 16); x.fillStyle = '#fff'; x.font = '12px monospace'; x.fillText('f' + frames[i], cx + 3, cy + 12);
   }
-  // determinism: same t twice, compare pixels
-  const fps = window.TIMELINE.fps; window.renderFrame(200 / fps); const a = src.toDataURL(); window.renderFrame(33 / fps); window.renderFrame(200 / fps); const b2 = src.toDataURL();
-  return { png: g.toDataURL('image/png').split(',')[1], ms, det: a === b2 };
+  // determinism: every frame again, in reverse order (so each follows a different frame), compare pixels
+  const bad = [];
+  for (let i = frames.length - 1; i >= 0; i--) { window.renderFrame(frames[i] / window.TIMELINE.fps); if (src.toDataURL() !== first[i]) bad.push(frames[i]); }
+  return { png: g.toDataURL('image/png').split(',')[1], ms, det: bad.length ? `false (frames ${bad.join(', ')} differ on a second render)` : true };
 }, frames);
 fs.writeFileSync(out, Buffer.from(res.png, 'base64'));
 console.log('ms/frame', res.ms.map((v) => v.toFixed(0)).join(' '), '| deterministic:', res.det);

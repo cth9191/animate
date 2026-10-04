@@ -80,8 +80,11 @@ function renderFrame(t, canvas) {
   F = ((Math.round(t * FPS) % NFRAMES) + NFRAMES) % NFRAMES;
   B = Math.floor(F / 2);
   TT = (STYLE.ones ? F : B * 2) / FPS;
-  const s = shotAtFrame(F), e = Math.max(0, eraAt(TT));
+  // the era is picked by the real frame, so a cut on an odd frame (a 16th at 24fps) lands on that frame;
+  // on its first frame the new era is drawn at its own start time (motion stays on 2s inside it)
+  const s = shotAtFrame(F), e = Math.max(0, eraAt(F / FPS));
   E0 = ERA_LIST[e][0];
+  if (TT < E0 - 1e-6) TT = E0;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setLineDash([]); ctx.filter = 'none';
   SPARK_AT = null;
   const bd = (r) => r.d ?? 0.6, bm = (r) => r.m ?? (r.d != null ? r.d / 3 : 0.2);

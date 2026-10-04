@@ -18,7 +18,7 @@ Ask only what you can't infer from the request. Batch them into one AskUserQuest
    - Write a voice-over script and time the picture to it (they record or generate the voice)
    - On-screen handwritten narration
 
-4. **The look?** Show the gallery first (`docs/styles.png`, or `node tools/gallery.mjs <out.png> [<project>/styles]`), then ask:
+4. **The look?** *(skip the gallery when the request already names a style or brings references — go to new-style.md or the named style)* Show the gallery first (`docs/styles.png`, or `node tools/gallery.mjs <out.png> [<project>/styles]`), then ask:
    - One of these: cut paper / crosshatch ink / riso print / sketchbook / math / pixel / isometric *(recommend the one that fits the subject: cut paper for histories and stories, crosshatch for Claude Code explainers, math for anything with equations or graphs, pixel for computing history, isometric for products, devices and infrastructure, riso or sketchbook for a softer editorial feel)*
    - A style they've made before (any `styles/<name>/` in their project)
    - My own references — links or files (videos, stills, a web page): follow [new-style.md](new-style.md); keep the media local and uncommitted

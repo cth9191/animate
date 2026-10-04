@@ -64,7 +64,7 @@ Renderer quirks a kit has to know:
 
 ## Making a style from an existing piece (porting)
 
-1. Extract the look's drawing code into `kit.js` on top of `kit/core.js` (drop what core already has; keep names stable).
+1. Extract the look's drawing code into `kit.js` on top of `kit/core.js` (drop what core already has; keep names stable). A brand-new look can start from `templates/style/kit.js`.
 2. Write `STYLE` hooks in the medium.
 3. Build `demo/` (copy `crosshatch/demo/`): two eras, one shape morph, a hero, a caption, 3+ details of background life.
 4. `node tools/build.mjs styles/<name>/demo`, then `node tools/tile.mjs styles/<name>/demo tile.png <frames>` → `deterministic: true`, and look at the tile.
