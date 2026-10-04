@@ -1,0 +1,6 @@
+# renders and intermediates are rebuilt by the tools
+**/frames/
+**/renders/
+**/review/*-vs-ref.*
+node_modules/
+examples/*/index.html

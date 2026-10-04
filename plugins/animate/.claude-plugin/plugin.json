@@ -1,0 +1,9 @@
+{
+  "name": "animate",
+  "displayName": "Animate",
+  "description": "Make short hand-drawn procedural animations (explainers, histories, little stories) as single-file canvas videos with a synthesized score: intake questions, story / look / storyboard check-ins, then a measured build to MP4.",
+  "version": "0.1.0",
+  "author": { "name": "cth9191" },
+  "license": "MIT",
+  "keywords": ["animation", "canvas", "video", "explainer", "storyboard", "procedural"]
+}

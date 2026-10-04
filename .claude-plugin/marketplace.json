@@ -1,0 +1,8 @@
+{
+  "name": "animate",
+  "owner": { "name": "cth9191" },
+  "description": "Hand-drawn procedural animation for Claude Code.",
+  "plugins": [
+    { "name": "animate", "source": "./plugins/animate", "description": "Short hand-drawn procedural animations as single-file canvas videos, built through story, look and storyboard check-ins." }
+  ]
+}

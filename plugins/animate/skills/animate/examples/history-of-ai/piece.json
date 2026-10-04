@@ -1,0 +1,22 @@
+{
+  "name": "history-of-ai",
+  "title": "A short history of AI",
+  "format": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 24,
+    "bpm": 120,
+    "duration": 60.0,
+    "frames": 1440
+  },
+  "storyFormat": "F2 morph chain (eras joined by shape morphs; one hard cut)",
+  "style": "cut-paper",
+  "review": {
+    "safe": {
+      "top": 240,
+      "bottom": 420,
+      "right": 140
+    },
+    "refs": {}
+  }
+}

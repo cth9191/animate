@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A short history of AI</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1714; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  A SHORT HISTORY OF AI — 9:16, 60.0s = 30 bars @ 120 BPM, 24fps. Cut-paper look (grammar/FRAME.md).
+//  The hero is the spark, the machine's mind: born as Turing's "?" in 1950 with 5 rays, a ray more each era,
+//  Claude's asterisk by 2025. 15 eras from storyboard v2 (storyboard-v2.html); each era is a full cut-paper world.
+//  Run 2: eras are joined by shape morphs (the old world closes in on one object, it morphs into the next era's
+//  counterpart, the new world opens out of it), as in Kevin's chronologies. The one hard cut is the enter key at 46.0.
+//  Silence at Nov 30 2022, the loudest hit on enter.
+//  Colour: orange = the spark (the machine's mind) and only it.
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;
+const DURATION = 60.0;
+const NFRAMES = Math.round(DURATION * FPS);  // 1440
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };
+const FOCUS = [470, 780], FS = [FOCUS[0] - W / 2, FOCUS[1] - H / 2];
+const HAND = '"Ink Free", "Segoe Print", cursive';
+const CX = 470;
+
+// eras: [t0, t1, scene]
+const ERA_LIST = [
+  [0, 4, () => sStudy()], [4, 8, () => sDartmouth()], [8, 12, () => sPerceptron()], [12, 16, () => sEliza()],
+  [16, 22, () => sWinter()], [22, 25, () => sBackprop()], [25, 29, () => sChess()], [29, 33, () => sPhotos()],
+  [33, 37, () => sGo()], [37, 41, () => sAttention()], [41, 44, () => sScale()], [44, 46, () => sHush()],
+  [46, 51, () => sHi()], [51, 56, () => sWork()], [56, 60, () => sStudy({ end: true })],
+];
+const MORPHS = [4, 8, 12, 16, 22, 25, 29, 33, 37, 41, 44, 51, 56];   // shape-morph bridges (render: TR); the one hard cut is 46.0
+const SHOTS = [
+  //  key          era  t0     t1     title
+  ['study',        0,   0.0,  4.0,  '1950: the ? opens its eyes; the page becomes a chalkboard'],
+  ['dartmouth',    1,   4.0,  8.0,  '1956: the field gets its name'],
+  ['perceptron',   2,   8.0,  12.0, '1958: the knobs turn; push in on "yes!"; the lamp becomes a lava lamp'],
+  ['eliza',        3,   12.0, 16.0, '1966: ELIZA talks back; the paper becomes snow'],
+  ['winter',       4,   16.0, 22.0, '1974: AI winter; the candle carries over'],
+  ['backprop',     5,   22.0, 25.0, '1986: try again, closer; the note becomes the chessboard'],
+  ['chess',        6,   25.0, 29.0, '1997: push in as the king falls'],
+  ['photos',       7,   29.0, 33.0, '2012: push in on cat!; the cork board becomes the Go board'],
+  ['go',           8,   33.0, 37.0, '2016: move 37; the stone becomes the spark'],
+  ['attention',    9,   37.0, 41.0, '2017: the strings tie'],
+  ['library',      10,  41.0, 44.0, '2020: zoom bumps on the beat; the spark collapses into a screen'],
+  ['hush',         11,  44.0, 46.0, 'Nov 30 2022: an empty box'],
+  ['hi',           12,  46.0, 51.0, 'enter (the one hard cut): millions say hi'],
+  ['work',         13,  51.0, 56.0, '2025: Claude Code; push into the framed page'],
+  ['end',          14,  56.0, 60.0, 'good question.'],
+];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'F5',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [46.0],
+  morphs: MORPHS,
+  cues: { born: 2.25, drop: 5.75, tag: 6.5, yes: 10.5, eliza: [12.25, 13.0, 13.25, 14.0, 14.9, 15.15], king: 26.75, cat: 31.0, move37: 35.0,
+    strings: [37.5, 40.5], keys: [45.5, 45.75], enter: 46.0, pills: [52.5, 53.0, 53.5], pass: 54.5, reply: [56.5, 58.0] },
+  anchor: { t0: 41.25, t1: 43.4, x: 470, y: 880, tolerance: 40 },
+  acts: [
+    { name: '1 Question',  role: 'stakes',     t0: 0.0,  t1: 4.0 },
+    { name: '2 Early',     role: 'build',      t0: 4.0,  t1: 16.0 },
+    { name: '3 Winter',    role: 'winter',     t0: 16.0, t1: 25.0 },
+    { name: '4 Comeback',  role: 'journey',    t0: 25.0, t1: 41.0 },
+    { name: '5 Library',   role: 'peak',       t0: 41.0, t1: 44.0 },
+    { name: '6 Hush',      role: 'silence',    t0: 44.0, t1: 46.0 },
+    { name: '7 Hi',        role: 'gift',       t0: 46.0, t1: 51.0 },
+    { name: '8 Work',      role: 'connection', t0: 51.0, t1: 56.0 },
+    { name: '9 Answer',    role: 'title',      t0: 56.0, t1: 60.0 },
+  ],
+  narration: [],
+  // the storyboard: one key frame per beat (kit/board.js renders renderFrame(t) for each)
+  board: [
+    { t: 3.0, title: '1950: the ? opens its eyes', sound: 'a pen scratch; one low note', next: 'the page grows into a chalkboard' },
+    { t: 7.0, title: '1956: the name', sound: 'chalk taps on 8ths', next: 'the spark carries over' },
+    { t: 11.0, title: '1958: yes!', sound: 'knob clicks; a ding', next: 'the lamp becomes a lava lamp' },
+    { t: 15.5, title: '1966: ELIZA', sound: 'teletype clatter', next: 'the paper becomes snow' },
+    { t: 19.0, title: '1974: AI winter', sound: 'wind; one drone', next: 'the candle carries over' },
+    { t: 24.2, title: '1986: closer...', sound: 'pencil; the beat returns', next: 'the note becomes the chessboard' },
+    { t: 27.5, title: '1997: the king falls', sound: 'a wooden thunk', next: 'the spark carries over' },
+    { t: 31.6, title: '2012: cat!', sound: 'shutter clicks; fans', next: 'the cork board becomes the Go board' },
+    { t: 35.8, title: '2016: move 37', sound: 'stone clacks; a gasp', next: 'the stone becomes the spark' },
+    { t: 40.0, title: '2017: attention', sound: 'strings pluck', next: 'the spark carries over' },
+    { t: 42.6, title: '2020: the library', sound: 'the fullest music', next: 'it collapses into a screen' },
+    { t: 45.8, title: 'Nov 30 2022: hi', sound: 'silence', next: 'enter: the one hard cut' },
+    { t: 48.5, title: 'millions say hi', sound: 'the loudest hit', next: 'the spark carries over' },
+    { t: 55.0, title: '2025: Claude Code', sound: 'warm; tool clicks', next: 'the framed page becomes the page' },
+    { t: 58.6, title: 'good question.', sound: 'the opening note', next: 'loops' },
+  ],
+};
+window.TIMELINE = TIMELINE;
