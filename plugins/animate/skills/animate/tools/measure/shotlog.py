@@ -3,7 +3,7 @@
 #   stepped         runs where motion alternates high/low on 2s (a camera or card stepped every 2 frames)
 #   flicker         frame n ~ n-2 but != n-1 (A/B alternation on 2s)
 #   per second      cuts, mean motion, loudness median / p90 (dBFS, 100ms RMS), onsets (energy flux), brightness (centroid Hz)
-# usage: python shotlog.py references/kevin-fruit-fly.mp4 [more videos]
+# usage: python shotlog.py references/some-video.mp4 [more videos]
 import subprocess, sys
 import numpy as np
 

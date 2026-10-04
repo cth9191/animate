@@ -1,8 +1,6 @@
-# Checks for the story study. Prints PASS/FAIL per file.
+# Checks shot logs and story outlines. Prints PASS/FAIL per file.
 #   shot log  (grammar/shotlogs/*.md): contiguous frames covering "frames: N"; every row has a step -> beat, a link
 #             "type: reason" (except row 1), a pace mode and a sound note
-#   STORY.md  : required sections; every rule ("- **" line in a rule section) cites >= 2 of [fly] [boat] [answer];
-#               WHAT VARIES has >= 3 bullets; "Our notes that were wrong" is non-empty
 #   outline   (pieces/study-story/outlines/*.md): beats contiguous on the 16th grid (0.125s), a link reason on every
 #             cut, a hold/build >= 1.5s, a beat >= 4 cuts/s, loudest beat != busiest beat, every claim tagged [F1-F7]
 #             or UNVERIFIED, narration <= 3.5 words/s
@@ -42,25 +40,6 @@ def check_shotlog(p):
     return errs, f'{len(R)} shots, f0-f{expect - 1} of {N}'
 
 RULE_SECS = ['THE TRUE PROCESS', 'THE HERO AND THE ANCHOR', 'THE PACE', 'THE CUT', 'THE SOUND', 'THE TITLE AND THE LOOP']
-def check_story(p):
-    S = sections(open(p, encoding='utf8').read()); errs = []
-    for s in RULE_SECS + ['WHAT VARIES', 'Beat types (pace per beat type, measured)', 'Evidence', 'Our notes that were wrong']:
-        if s not in S: errs.append(f'missing section: {s}')
-    n = weak = 0
-    for s in RULE_SECS:
-        for line in S.get(s, []):
-            if not line.startswith('- **'): continue
-            n += 1; tags = set(re.findall(r'\[(fly|boat|answer)\b', line))
-            name = re.match(r'- \*\*(.+?)\*\*', line).group(1)[:70]
-            print(f'   {len(tags)} videos  {s:24s} {name}')
-            if len(tags) < 2: weak += 1; errs.append(f'rule cites {len(tags)} story video(s): {name}')
-    varies = [l for l in S.get('WHAT VARIES', []) if l.startswith('- ')]
-    wrong = [l for l in S.get('Our notes that were wrong', []) if re.match(r'^\d+\.', l)]
-    if len(varies) < 3: errs.append('WHAT VARIES has fewer than 3 bullets')
-    if not wrong: errs.append('"Our notes that were wrong" is empty')
-    print(f'   rules: {n}; rules with fewer than 2 story-video citations: {weak}; WHAT VARIES bullets: {len(varies)}; notes corrected: {len(wrong)}')
-    return errs, f'{n} rules'
-
 def check_outline(p):
     t = open(p, encoding='utf8').read(); S = sections(t); errs = []
     B = rows('\n'.join(S.get('Beats', [])))
@@ -95,8 +74,7 @@ def check_outline(p):
 
 def check(p):
     base = os.path.basename(p)
-    if base == 'STORY.md': errs, info = check_story(p)
-    elif os.sep + 'shotlogs' in p or '/shotlogs' in p: errs, info = check_shotlog(p)
+    if os.sep + 'shotlogs' in p or '/shotlogs' in p: errs, info = check_shotlog(p)
     else: errs, info = check_outline(p)
     print(f'{"PASS" if not errs else "FAIL"}  {p}  ({info})')
     for e in errs: print('   -', e)

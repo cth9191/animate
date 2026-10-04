@@ -11,7 +11,7 @@
 //
 // The beat grid comes from TIMELINE.bpm (default 100): 8ths = 30/bpm s, 16ths = 15/bpm s.
 //
-// piece.json -> review.refs: { "<shot id>": ["kevin-000.0s.jpg", "pieces/claude-code-prompt/review/shot01-sheet.jpg"] }
+// piece.json -> review.refs: { "<shot id>": ["ref-000.0s.jpg", "pieces/other-piece/review/shot01-sheet.jpg"] }
 //   bare names resolve to references/stills/, names with a slash resolve from the repo root
 //
 // usage: node tools/review.mjs pieces/<name>
