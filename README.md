@@ -66,10 +66,6 @@ Open any built `index.html` in a browser to preview it (click to hear the score;
 
 `plugins/animate/skills/animate/examples/history-of-ai/` is a complete 60-second piece built with the kit: 15 eras from Turing's "Can machines think?" (1950) to Claude Code (2025), a small orange "spark" that gains a ray each era, 13 shape-morph transitions, one hard cut on the payoff, and a synthesized score. Build it with `node plugins/animate/skills/animate/tools/build.mjs plugins/animate/skills/animate/examples/history-of-ai`, then export it.
 
-## Credits
-
-The story grammar was learned by studying the short-form animations Kevin Ngo posts publicly; this project is not affiliated with him and contains none of his media. Everything here — the kit, the tools, the example — is original code.
-
 ## License
 
 MIT
