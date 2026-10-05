@@ -11,7 +11,7 @@
 // A style is found in a styles/<name>/ folder beside the piece or above it, then in this skill's styles/
 // (so a style made for one project, e.g. <project>/styles/my-look/, works for every piece in that project).
 // Checks: the script compiles; the style defines STYLE; no data: URIs and no http(s) URLs in the code.
-// Generated parts: <piece>/beats.json -> const BEATS (a supplied track's beat map); <piece>/assets/* -> const ASSETS
+// Generated parts: <piece>/beats.json -> const BEATS (a supplied track's beat map); <piece>/voice.json -> const VOICE (voice-over timing); <piece>/assets/* -> const ASSETS
 // (the user's own screenshots and logos, embedded; window.renderFrame appears once they're decoded).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -66,6 +66,10 @@ const inject = [];
 // a supplied music track's beat map (tools/beats.mjs -> <piece>/beats.json): the head reads BEATS.bpm / BEATS.offset
 const beatsFile = path.join(ROOT, 'beats.json');
 if (fs.existsSync(beatsFile)) inject.push(`// ---- beats.json (tools/beats.mjs): the supplied track's tempo, beats, downbeats and hits\nconst BEATS = ${JSON.stringify(JSON.parse(fs.readFileSync(beatsFile, 'utf8')))};`);
+// a voice-over's timing (tools/voice.mjs -> <piece>/voice.json): lines and word times the scenes cue on
+const voiceFile = path.join(ROOT, 'voice.json');
+if (fs.existsSync(voiceFile)) { const V = JSON.parse(fs.readFileSync(voiceFile, 'utf8')); V.lines.forEach((l) => delete l.take); inject.push(`// ---- voice.json (tools/voice.mjs): the voice-over's lines and word times
+const VOICE = ${JSON.stringify(V)};`); }
 // the user's own assets: screenshots and logos in <piece>/assets/, embedded so the piece stays one file and
 // the canvas stays readable (an image loaded from a file:// URL would taint it and break every check)
 const ASSET_DIR = path.join(ROOT, 'assets'), MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' };
@@ -88,6 +92,6 @@ if (assetFiles.length) {
 const m2 = out.match(/<script>([\s\S]*)<\/script>/);
 try { new vm.Script(m2[1], { filename: 'index.html' }); } catch (e) { console.error('syntax error:', e.message); process.exit(1); }
 fs.writeFileSync(path.join(ROOT, 'index.html'), out);
-const extras = [fs.existsSync(beatsFile) ? 'beats.json' : null, assetFiles.length ? `${assetFiles.length} asset(s), ${(assetBytes / 1e6).toFixed(1)} MB` : null].filter(Boolean);
+const extras = [fs.existsSync(beatsFile) ? 'beats.json' : null, fs.existsSync(voiceFile) ? 'voice.json' : null, assetFiles.length ? `${assetFiles.length} asset(s), ${(assetBytes / 1e6).toFixed(1)} MB` : null].filter(Boolean);
 if (assetBytes > 12e6) console.warn(`warning: ${(assetBytes / 1e6).toFixed(1)} MB of assets — resize screenshots to the size they're shown at`);
 console.log(`built ${path.join(ROOT, 'index.html')}: ${out.split('\n').length} lines from ${parts.length} parts (style: ${styleName})${extras.length ? ' + ' + extras.join(' + ') : ''}; syntax ok; no external assets`);

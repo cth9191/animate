@@ -42,6 +42,11 @@ let REVIEW = path.join(ROOT, 'review');
 let VIDEO = path.join(ROOT, 'renders', 'final.mp4');
 
 const PIECE = JSON.parse(fs.readFileSync(path.join(ROOT, 'piece.json'), 'utf8'));
+// a voice-over piece (piece.json "voice"): the story arc and the payoff window are judged on the score alone
+// (renders/audio-score.wav, written by export.mjs before the voice goes on top): a voice is louder than any hit, and
+// NARRATION checks it. Integrated loudness and true peak stay on the delivered mix (renders/audio.wav).
+const SCORE_WAV = path.join(ROOT, 'renders', 'audio-score.wav');
+const SOUND_WAV = PIECE.voice && fs.existsSync(SCORE_WAV) ? SCORE_WAV : path.join(ROOT, 'renders', 'audio.wav');
 const REF_FOR = PIECE.review?.refs || {};
 const REFDIR = path.join(REPO, 'references');
 const refPath = (n) => {
@@ -233,7 +238,7 @@ if (T.acts && T.acts.length) {
     return db;
   };
   const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))] : -120; };
-  const mix = levels(path.join(ROOT, 'renders', 'audio.wav')), music = levels(path.join(ROOT, 'renders', 'stem-music.wav'));
+  const mix = levels(SOUND_WAV), music = levels(path.join(ROOT, 'renders', 'stem-music.wav'));
   const rows = T.acts.map((a) => {
     const w0 = Math.round(a.t0 * 10), w1 = Math.round(a.t1 * 10), f0 = Math.round(a.t0 * T.fps), f1 = Math.round(a.t1 * T.fps);
     const cuts = T.cuts.filter((c) => c >= a.t0 - 1e-6 && c < a.t1 - 1e-6).length;
@@ -340,7 +345,7 @@ printTextCheck(TXT, PIECE.review?.textIgnore || []);
 const WAV = path.join(ROOT, 'renders', 'audio.wav');
 if (fs.existsSync(WAV)) {
   const SR = 8000, WIN = SR / 10;
-  const pcm = spawnSync('ffmpeg', ['-v', 'error', '-i', WAV, '-ac', '1', '-ar', String(SR), '-f', 's16le', '-'], { maxBuffer: 1 << 28 }).stdout;
+  const pcm = spawnSync('ffmpeg', ['-v', 'error', '-i', SOUND_WAV, '-ac', '1', '-ar', String(SR), '-f', 's16le', '-'], { maxBuffer: 1 << 28 }).stdout;
   const db = [];
   for (let o = 0; o + WIN * 2 <= pcm.length; o += WIN * 2) { let q = 0; for (let i = 0; i < WIN; i++) { const v = pcm.readInt16LE(o + i * 2) / 32768; q += v * v; } db.push(10 * Math.log10(q / WIN + 1e-12)); }
   const L = db.indexOf(Math.max(...db));
@@ -350,7 +355,7 @@ if (fs.existsSync(WAV)) {
   const num = (re) => { const m = eb.match(re); return m ? Number(m[1]) : null; };
   const I = num(/Integrated loudness:[\s\S]*?I:\s+(-?[\d.]+) LUFS/), LRA = num(/Loudness range:[\s\S]*?LRA:\s+(-?[\d.]+) LU/), TP = num(/True peak:[\s\S]*?Peak:\s+(-?[\d.]+) dBFS/);
   const gift = (T.acts || []).find((a) => a.role === 'gift');
-  console.log('\nSOUND (mix: renders/audio.wav)');
+  console.log(SOUND_WAV === SCORE_WAV ? '\nSOUND (the payoff window on the score without the voice: renders/audio-score.wav; loudness on the mix)' : '\nSOUND (mix: renders/audio.wav)');
   console.log(`  loudest 100ms window: ${(L / 10).toFixed(1)}s (${db[L].toFixed(1)} dBFS)${gift ? ` - ${L / 10 >= gift.t0 && L / 10 < gift.t1 ? 'in' : 'NOT in'} the payoff act ${gift.t0}-${gift.t1}s` : ''}`);
   console.log(`  silence before it: ${(best / 10).toFixed(1)}s at <= -40 dBFS${best ? ` ending ${((bestEnd + 1) / 10).toFixed(1)}s` : ''} in the 2s before (craft.md wants 0.5-4s when the story has a turn)`);
   console.log(`  loudness: ${I != null ? I.toFixed(1) + ' LUFS integrated' : 'n/a'}, range ${LRA != null ? LRA.toFixed(1) + ' LU' : 'n/a'}, true peak ${TP != null ? TP.toFixed(1) + ' dBFS' : 'n/a'} (phone target about -16 to -14 LUFS, peak <= -1)`);

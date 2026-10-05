@@ -8,7 +8,7 @@ argument-hint: "[what the video is about] [style or reference]"
 
 You make short animated videos in code: one `<canvas>`, drawn and scored procedurally, deterministic frame by frame, rendered with a headless browser and ffmpeg. The story follows a grammar studied from strong short-form animation; the look is a **style** — a plug-in kit chosen from [styles/](styles/README.md) or made from the user's references with [new-style.md](new-style.md).
 
-**Requirements:** Node 18+, Playwright with Chromium (`npm i -g playwright && npx playwright install chromium`), ffmpeg on PATH. Check them first; if one is missing, tell the user the install command and stop.
+**Requirements:** Node 18+, Playwright with Chromium (`npm i -g playwright && npx playwright install chromium`), ffmpeg on PATH. Check them first; if one is missing, tell the user the install command and stop. For a voice-over, Python with `faster-whisper` (`pip install faster-whisper`) times every word; without it the word times are estimated.
 
 All paths below are relative to this skill's base directory. Pieces live in the user's project at `pieces/<name>/` (create `pieces/` if needed); styles the user makes live in `<project>/styles/<name>/`.
 
@@ -60,6 +60,20 @@ Send `renders/share.mp4`. Say in a few lines: what it is, the checks' numbers, w
 
 ### 6. Learn
 After each run append to the piece's `LOG.md`. If something new went wrong or worked, propose a one-line rule for [craft.md](craft.md), the style's `STYLE.md` or a kit change, and add it when the user agrees.
+
+## Voice-over (optional)
+
+Ask at intake (question 3). With a voice, **the voice is the clock**: each beat starts ~0.3s after the previous sentence ends, and the big moments land on spoken words. The script is the storyboard: one line per beat.
+1. Write the script to `pieces/<name>/voice/script.json`: `{ "lead": 1.2, "tail": 1.8, "lines": [{ "id": "open", "text": "As it is spoken.", "after": 0.45 }, ...] }`. Write numbers and names the way they should be said. Keep it ≤ 3.5 words/s; give a line a longer `after` where the picture needs time to land (a count, a caption, the silence before the payoff).
+2. **Build before the voice exists:** `node tools/voice.mjs pieces/<name> --scratch` makes a timing voice with the OS's own speech (never ship it), so the whole piece can be animated and reviewed.
+3. **The takes:** one file per line, saved as `voice/<id>.mp3` with `"file"` set on the line.
+   - **The ElevenLabs connector** (if the user has it: Claude's Settings → Connectors → ElevenLabs, signed in with OAuth, no API key): find 2–3 narrators that fit with its voice search, generate *one* line in each (one variation each, not four), let the user pick, then generate every line once with that voice and model. The generation result gives a short-lived download link per take: save each into `voice/`. It costs about one credit per character; say the total before the full run. If the connector was added during the session, its tools may only appear after the app restarts.
+   - **The user's own recording,** one file per line (or cut from one take).
+   - Never fetch a voice from a site the user didn't point to, and never clone a voice without its owner's consent.
+4. `node tools/voice.mjs pieces/<name>` → `voice/voice.wav` (the lines with their pauses) and `voice.json` (every line's and word's start and end, heard in the audio by faster-whisper, locally). The build injects it as `VOICE`.
+5. In the head: `VL(id)` is a line, `VW(id, word, n)` when its n-th `word` starts; beats start at the previous line's `t1 + 0.3`; `TIMELINE.narration` comes from `VOICE.lines` and `DURATION` from `VOICE.duration`. Cue Writes and flashes on the words that name them. **Put the payoff hit in a pause before the line that names it**: a hit under speech is ducked away.
+6. `piece.json`: `"voice": { "file": "voice/voice.wav", "music": -12 }`. Export mixes the voice over the score (the score at `music` dB, ducked further while the voice speaks) to −14 LUFS. Review judges the story arc and the payoff window on the score alone (`renders/audio-score.wav`; a voice is louder than any hit) and the voice with its NARRATION check.
+7. **Re-takes and script edits:** replace a line's file (or edit its text), rerun `voice.mjs`, rebuild: scenes cued from `VOICE` move with it. A changed word can orphan a cue that points at it; check those beats.
 
 ## Music: the user's own track (optional)
 
@@ -113,7 +127,7 @@ A 45–60s piece has 10–15 scenes; split the drawing across agents once the st
 | `kit/board.js` | the storyboard renderer | steps 2–3 |
 | `kit/score-*.js` | synth (pluck, pad, drone, bass, sub, noiseHit, sweep, riser, chime, blip), loudness stage | scoring |
 | [templates/](templates/) | `piece/` (an 8s cut-paper morph), `beat-cut/` (a 6s hard-cut piece with a 16th rush), `style/` (a blank style kit for new looks) | step 2 |
-| `tools/` | build, tile, still, storyboard, export, review, textcheck, compare (reference vs frame), gallery, framehash (pixel-identity check), beats (a supplied track's beat map), capture (screenshots of the user's site); `measure/` for references (`refs.mjs` for stills, `shotlog.py` for video) | throughout |
+| `tools/` | build, tile, still, storyboard, export, review, textcheck, compare (reference vs frame), gallery, framehash (pixel-identity check), beats (a supplied track's beat map), capture (screenshots of the user's site), voice (a voice-over's lines and word times); `measure/` for references (`refs.mjs` for stills, `shotlog.py` for video) | throughout |
 | [examples/history-of-ai/](examples/history-of-ai/) | a full 60s worked example (cut paper) | when unsure how something fits |
 
 ## Honesty about what's proven

@@ -14,6 +14,8 @@
 // blur:     --blur 4 averages 4 sub-frames per frame (a 180-degree shutter) — styles on 1s only (STYLE.ones)
 // music:    piece.json "music": { "file": "audio/track.wav", "start": 0, "gain": 0, "fade": 0.5 } — the user's track
 //           replaces the synthesized music; the score's sfx bus is mixed on top, then loudness to -14 LUFS
+// voice:    piece.json "voice": { "file": "voice/voice.wav", "music": -14, "gain": 0 } — the voice-over (tools/voice.mjs)
+//           over the score: the score at "music" dB, ducked a little more while the voice speaks, then -14 LUFS
 //
 // usage: node tools/export.mjs pieces/<name> [--from N] [--to N] [--workers 4] [--no-audio] [--no-mux] [--no-captions] [--only-audio] [--share] [--gpu] [--format F | --formats A,B] [--blur N]
 import { createRequire } from 'node:module';
@@ -95,6 +97,8 @@ console.log(`index.html: ${meta.width}x${meta.height}, ${meta.frames} frames @ $
 const SUFFIX = FORMAT && FORMAT !== (PIECE_JSON.formats || [])[0] ? `-${meta.width}x${meta.height}` : '';   // the main format (piece.json "formats"[0]) keeps final.mp4
 const FR = SUFFIX ? FRAMES + SUFFIX : FRAMES;
 fs.mkdirSync(FR, { recursive: true });
+// a piece that got shorter leaves its old tail frames behind, and ffmpeg's image sequence would join them on: remove them
+for (const n of fs.readdirSync(FR)) { const m = /^f(\d+)\.png$/.exec(n); if (m && Number(m[1]) >= meta.frames) fs.unlinkSync(path.join(FR, n)); }
 if (BLUR > 1 && !(await first.evaluate(() => typeof STYLE === 'object' && STYLE.ones))) console.warn(`warning: --blur ${BLUR} does nothing for a style on 2s (STYLE.ones is false): every sub-frame is the same drawing`);
 
 if (!onlyAudio) {
@@ -146,6 +150,21 @@ if (!flag('no-audio')) {
     r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-ss', String(M.start ?? 0), '-t', String(dur), '-i', track, '-filter_complex', `${chain}[o]`, '-map', '[o]', path.join(RENDERS, 'stem-music.wav')], { stdio: 'inherit' });
     console.log(`music: ${path.basename(track)} from ${M.start ?? 0}s, ${dur.toFixed(2)}s${fs.existsSync(sfx) ? ' + the score\'s sfx stem' : ''}, loudness -14 LUFS -> audio.wav`);
   }
+  // the voice-over on top of whatever the score (or the track) became
+  const V = PIECE_JSON.voice;
+  if (V && V.file) {
+    const vo = path.resolve(ROOT, V.file), dur = meta.frames / meta.fps, mixIn = path.join(RENDERS, 'audio-score.wav');
+    if (!fs.existsSync(vo)) { console.error('voice file not found:', vo, '(run tools/voice.mjs)'); process.exit(1); }
+    fs.copyFileSync(wavPath, mixIn);
+    const graph = `[1:a]aresample=48000,aformat=channel_layouts=stereo,volume=${V.gain ?? 0}dB,apad,asplit=2[v][k];` +
+      `[0:a]aresample=48000,aformat=channel_layouts=stereo,volume=${V.music ?? -14}dB[s];` +
+      `[s][k]sidechaincompress=threshold=0.02:ratio=4:attack=30:release=400[d];` +
+      `[d][v]amix=inputs=2:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11[o]`;
+    let r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', mixIn, '-i', vo, '-filter_complex', graph, '-map', '[o]', '-ar', '48000', '-t', String(dur), wavPath], { stdio: 'inherit' });
+    if (r.status !== 0) { console.error('voice mix failed'); process.exit(1); }
+    r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', vo, '-af', 'apad', '-ar', '48000', '-ac', '2', '-t', String(dur), path.join(RENDERS, 'stem-voice.wav')], { stdio: 'inherit' });
+    console.log(`voice: ${path.basename(vo)} over the score at ${V.music ?? -14} dB (ducked under the voice), loudness -14 LUFS -> audio.wav (the score alone: audio-score.wav)`);
+  }
 }
 await browser.close();
 
@@ -156,7 +175,7 @@ if (!flag('no-mux') && !onlyAudio && full) {
     '-framerate', String(meta.fps), '-i', path.join(FR, 'f%04d.png'),
     ...(fs.existsSync(wavPath) && !flag('no-audio') ? ['-i', wavPath, '-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-b:a', '192k'] : ['-map', '0:v:0']),
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '14', '-pix_fmt', 'yuv420p', '-r', String(meta.fps),
-    '-movflags', '+faststart', out];
+    '-frames:v', String(meta.frames), '-movflags', '+faststart', out];
   const r = spawnSync('ffmpeg', args, { stdio: 'inherit' });
   if (r.status !== 0) { console.error('ffmpeg failed'); process.exit(1); }
   console.log('wrote', out);

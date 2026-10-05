@@ -17,7 +17,7 @@ The skill walks you through a few questions, then makes you approve three cheap 
 | 2. Look check | 2–4 full-size style frames (for a new look: side-by-side comparisons with your references) | thumbs up per frame |
 | 3. Storyboard | every beat as a key frame, with sound and the transition into the next | thumbs up/down by panel number |
 | 4. Build | — (animate the approved panels, render, review) | — |
-| 5. Delivery | the video plus measured checks: cuts on the beat grid, story arc loudness, hero anchoring, the loudest moment after the silence | notes → a revision run |
+| 5. Delivery | the video plus measured checks: cuts on the beat grid, story arc loudness, hero anchoring, the loudest moment after the silence, narration pace | notes → a revision run |
 
 ## Styles
 
@@ -43,6 +43,7 @@ Each style folder has a `STYLE.md` (its rules, palette, motion habits and a fram
 - **A kit** (`kit/`) — seeded randomness and a line that boils on 2s; cameras; a renderer with shape-morph transitions (the old world closes in on one object, it morphs into the next world's counterpart, the new world opens out of it) that draws through the style's hooks; a storyboard; a synthesizer and a loudness stage for phone playback.
 - **Tools** (`tools/`) — build (assembles one self-contained `index.html` from the piece, the kit and the style), test tiles, stills, storyboard, export (frames → WAV + stems → MP4), review (contact sheets and the measured checks, including text that's cut off or overlapping, and loudness), compare (reference vs frame), a reference measurer, gallery, and a frame-hash check that a kit change left a piece pixel-identical.
 - **Craft rules** (`craft.md`) — everything learned building these pieces, from "the sustained pad sets a section's loudness, not the plucks" to "cameras put a world point on a screen point".
+- **A voice-over** — it writes the script, gets one take per line from the ElevenLabs connector (or your recording), hears when every word is spoken (locally, with faster-whisper) and times the picture to the words; re-takes re-time the picture automatically.
 - **Your own music** — give it a track and it maps the beats (tempo, bars, the big hits, the drops), cuts on the song's beats and puts the payoff on its loudest hit; or it composes a score in code.
 - **Your real product** — it screenshots your site (or takes your logo files) and animates the real screens inside the style.
 - **Every format from one piece** — 9:16, 1:1, 4:5 and 16:9 laid out for each shape, not cropped.
@@ -53,7 +54,7 @@ Each style folder has a `STYLE.md` (its rules, palette, motion habits and a fram
 
 ## Install
 
-Requirements: [Claude Code](https://code.claude.com), Node 18+, [Playwright](https://playwright.dev) with Chromium, and ffmpeg on your PATH. Fonts are local system fonts with fallbacks for Windows, macOS and Linux.
+Requirements: [Claude Code](https://code.claude.com), Node 18+, [Playwright](https://playwright.dev) with Chromium, and ffmpeg on your PATH. Fonts are local system fonts with fallbacks for Windows, macOS and Linux. For voice-overs: Python with `faster-whisper` (word timing) and, optionally, the ElevenLabs connector in Claude (Settings → Connectors) for the voice.
 
 ```bash
 npm i -g playwright && npx playwright install chromium
@@ -75,6 +76,7 @@ Or copy the skill folder by hand: `plugins/animate/skills/animate/` → `~/.clau
 /animate how a hash map works, in the math style
 /animate a short about our API in the style of these screenshots: ./refs/
 /animate a 20s launch reel for https://my-product.com, cut to ./audio/song.mp3, vertical and square
+/animate a narrated 45s explainer of how DNS works, math style, 16:9, voice from ElevenLabs
 ```
 
 Pieces are created in your project under `pieces/<name>/`. You can also drive the tools yourself:
@@ -87,6 +89,7 @@ node $SKILL/tools/still.mjs pieces/my-piece 2.5,9,14 frames.png --scale 0.5
 node $SKILL/tools/storyboard.mjs pieces/my-piece
 node $SKILL/tools/beats.mjs pieces/my-piece/audio/track.wav pieces/my-piece --start 12
 node $SKILL/tools/capture.mjs https://my-product.com pieces/my-piece/assets/home.png
+node $SKILL/tools/voice.mjs pieces/my-piece            # voice/script.json + one take per line -> voice.wav, voice.json (--scratch: a timing voice)
 node $SKILL/tools/export.mjs pieces/my-piece --share --formats 9:16,1:1,16:9
 node $SKILL/tools/review.mjs pieces/my-piece
 node $SKILL/tools/measure/refs.mjs references/my-look/
