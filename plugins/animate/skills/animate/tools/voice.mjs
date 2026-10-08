@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Voice-over: place the script's lines on the timeline and time every word, so the picture can cue on the voice.
-//   usage: node tools/voice.mjs pieces/<name> [--scratch] [--model small.en] [--rate 0]
+//   usage: node tools/voice.mjs pieces/<name> [--scratch] [--model small] [--rate 0]
 // reads  <piece>/voice/script.json:
 //   { "lead": 0.8, "tail": 1.5, "lines": [ { "id": "open", "text": "As it is spoken.", "file": "open.mp3", "after": 0.4 }, ... ] }
 //   file   the line's audio, relative to <piece>/voice/: a text-to-speech take (e.g. the ElevenLabs MCP's download link,
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : d; };
-if (!argv[0] || argv[0].startsWith('--')) { console.error('usage: node tools/voice.mjs pieces/<name> [--scratch] [--model small.en] [--rate 0]'); process.exit(2); }
+if (!argv[0] || argv[0].startsWith('--')) { console.error('usage: node tools/voice.mjs pieces/<name> [--scratch] [--model small] [--rate 0]'); process.exit(2); }
 const ROOT = path.resolve(argv[0]), VDIR = path.join(ROOT, 'voice'), SR = 48000;
 const S = JSON.parse(fs.readFileSync(path.join(VDIR, 'script.json'), 'utf8'));
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -69,9 +69,11 @@ const wav = path.join(VDIR, 'voice.wav');
 fs.writeFileSync(wav, Buffer.concat([hdr, out]));
 
 // ---- word times: what the recogniser heard, matched to the script's words line by line
-const norm = (w) => w.toLowerCase().replace(/[^a-z0-9]/g, '');
+const norm = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');   // keeps å ä ö
 let heard = null;
-const py = spawnSync(process.platform === 'win32' ? 'python' : 'python3', [path.join(HERE, 'voice_words.py'), wav, '--model', opt('--model', 'small.en')], { maxBuffer: 1 << 26 });
+// the language is detected from the audio (Swedish or English); script.json "lang": "sv" | "en" forces it
+const PY = process.platform === 'win32' ? (spawnSync('python', ['--version']).error ? 'py' : 'python') : 'python3';
+const py = spawnSync(PY, [path.join(HERE, 'voice_words.py'), wav, '--model', opt('--model', 'small'), ...(S.lang ? ['--lang', S.lang] : [])], { maxBuffer: 1 << 26 });
 if (py.status === 0) { try { heard = JSON.parse(py.stdout.toString().trim().split('\n').pop()); } catch { heard = null; } }
 if (!heard) console.warn('word times: faster-whisper unavailable (pip install faster-whisper) — estimating from the letters');
 let matched = 0, totalWords = 0;
