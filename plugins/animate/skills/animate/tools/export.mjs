@@ -95,6 +95,16 @@ const to = Math.min(parseInt(opt('to', String(meta.frames - 1)), 10), meta.frame
 console.log(`index.html: ${meta.width}x${meta.height}, ${meta.frames} frames @ ${meta.fps}fps (${(meta.frames / meta.fps).toFixed(4)}s)`);
 // another format than the main one: its own frames folder and renders/<name>-<w>x<h>.mp4
 const SUFFIX = FORMAT && FORMAT !== (PIECE_JSON.formats || [])[0] ? `-${meta.width}x${meta.height}` : '';   // the main format (piece.json "formats"[0]) keeps final.mp4
+// --format must yield that shape or fail: a piece whose page ignores ?format (?format=16:9 on a page with a fixed
+// 1080x1920 canvas) otherwise renders the MAIN format and names it final-<w>x<h>.mp4 from its real size — a file
+// labelled as another aspect than it is. Catch it here, before 1440 frames get drawn under a false name.
+if (FORMAT) {
+  const want = FORMAT.split(':').map(Number), short = Math.min(...want);
+  const [ew, eh] = want.map((v) => Math.round(1080 * v / short));   // export sizes 1080 on the SHORT side (16:9 -> 1920x1080)
+  if (Math.abs(meta.width - ew) > 1 || Math.abs(meta.height - eh) > 1)
+    throw new Error(`--format ${FORMAT} asked for ${ew}x${eh} but index.html rendered ${meta.width}x${meta.height}: `
+      + `this piece's page ignores ?format (it probably hardcodes W/H instead of reading FORMAT — see templates/piece/src/head.html)`);
+}
 const FR = SUFFIX ? FRAMES + SUFFIX : FRAMES;
 fs.mkdirSync(FR, { recursive: true });
 // a piece that got shorter leaves its old tail frames behind, and ffmpeg's image sequence would join them on: remove them

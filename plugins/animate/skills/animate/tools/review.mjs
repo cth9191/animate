@@ -95,6 +95,9 @@ await browser.close();
 const { T } = info;
 // another format than the main one: its own render and review folder
 if (FORMAT && FORMAT !== (PIECE.formats || [])[0]) { const suf = `-${T.width}x${T.height}`; VIDEO = path.join(ROOT, 'renders', `final${suf}.mp4`); REVIEW = path.join(ROOT, `review${suf}`); }
+// export.mjs writes a non-main format's frames to frames-<w>x<h>/ alongside that final-<w>x<h>.mp4, but the contact
+// sheets below hardcode frames/: read the same dir the exporter wrote, or every --format review dies "sheet failed"
+const FRAMES_DIR = path.join(ROOT, FORMAT && FORMAT !== (PIECE.formats || [])[0] ? `frames-${T.width}x${T.height}` : 'frames');
 fs.mkdirSync(REVIEW, { recursive: true });
 if (!fs.existsSync(VIDEO)) { console.error('no render at', VIDEO, '- run export.mjs first'); process.exit(1); }
 const FW = T.width || 1080, FH = T.height || 1080, VERTICAL = FH > FW;
@@ -125,7 +128,7 @@ for (const shot of T.shots) {
   const tag = `shot${String(shot.id).padStart(2, '0')}`;
   const sheet = path.join(REVIEW, `${tag}-sheet.jpg`);
   const sel = uniq.map((f) => `eq(n\\,${f})`).join('+');
-  let r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-framerate', String(T.fps), '-start_number', '0', '-i', path.join(ROOT, 'frames', 'f%04d.png'),
+  let r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-framerate', String(T.fps), '-start_number', '0', '-i', path.join(FRAMES_DIR, 'f%04d.png'),
     '-vf', `${safeBoxes}drawtext=${font}:text='%{pts\\:hms}  f%{n}':x=14:y=14:fontsize=${labelSize}:fontcolor=yellow:box=1:boxcolor=black@0.65:boxborderw=6,select='${sel}',scale=${cellW}:${cellH},tile=${cols}x${rows}`,
     '-frames:v', '1', '-q:v', '3', sheet], { stdio: 'inherit' });
   if (r.status !== 0) throw new Error('sheet failed for shot ' + shot.id);
