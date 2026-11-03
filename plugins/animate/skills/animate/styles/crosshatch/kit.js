@@ -136,7 +136,7 @@ const STYLE = {
   window(P, key, src) {   // the world seen through an inked hole with a hatched shadow
     const Q = wobble(P, true, 2.5, key, 9);
     ctx.save(); ctx.translate(10, 14); trace(Q, true); ctx.clip(); hatch(bbox(Q, 20), { key: key + 'sh', a: 0.8, gap: 5, al: 0.45 }); ctx.restore();
-    ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(src, 0, 0); ctx.restore();
+    ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(src, 0, 0, W, H); ctx.restore();
     ink(P, { closed: true, w: 4.5, key: key + 'rim', double: true });
   },
   blob(P, c, key) { paint(P, { fill: c, key, w: 4, tex: [{ k: 'hatch', a: 0.8, gap: 6, al: 0.35 }, { k: 'pencil', c: '#fff6e0', al: 0.3, per: 80 }] }); },

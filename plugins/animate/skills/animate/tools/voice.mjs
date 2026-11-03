@@ -2,18 +2,21 @@
 // Voice-over: place the script's lines on the timeline and time every word, so the picture can cue on the voice.
 //   usage: node tools/voice.mjs pieces/<name> [--scratch] [--model small.en] [--rate 0]
 // reads  <piece>/voice/script.json:
-//   { "lead": 0.8, "tail": 1.5, "lines": [ { "id": "open", "text": "As it is spoken.", "file": "open.mp3", "after": 0.4 }, ... ] }
+//   { "lang": "en", "lead": 0.8, "tail": 1.5, "lines": [ { "id": "open", "text": "As it is spoken.", "file": "open.mp3", "after": 0.4 }, ... ] }
 //   file   the line's audio, relative to <piece>/voice/: a text-to-speech take (e.g. the ElevenLabs MCP's download link,
 //          saved there), or the user's own recording. One file per line, so pauses and re-takes stay per line.
-//   after  the pause after the line (s); lead = silence before the first line, tail = after the last
+//   after  the pause after the line (s); lead = silence before the first line, tail = after the last ("total": 120 sets the tail to end there)
 // writes <piece>/voice/voice.wav (48 kHz mono, the lines with their pauses) and <piece>/voice.json:
-//   { duration, lines: [ { id, text, t0, t1, words: [ { w, t0, t1 } ] } ] }; tools/build.mjs injects it as VOICE.
+//   { duration, lines: [ { id, text, t0, t1, words: [ { w, t0, t1 } ] } ], envFps, env: [loudness per frame 0..1] };
+//   tools/build.mjs injects it as VOICE. Takes can come from tools/tts.py (local, free: Kokoro, Chatterbox, Piper).
 // Word times come from the audio itself (tools/voice_words.py, faster-whisper, local); without it they are estimated
 // from the letters. --scratch makes any missing line with the OS's own speech (Windows SAPI, macOS say) so the picture
 // can be timed before the real voice exists: swap the real takes in, run this again, rebuild — scenes that cue from
 // VOICE move with it.
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,15 +37,15 @@ function scratch(text, out) {
   return spawnSync('espeak', ['-w', out, text]).status === 0;
 }
 
-// decode a take to 48 kHz mono s16, trimmed of the silence around it
+// decode a take to 48 kHz mono s16, trimmed of the silence around it; a few ms of fade at each end, or the cut lands mid-wave and clicks
 function decode(file) {
-  const trim = 'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.02';
-  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', file, '-af', `${trim},areverse,${trim},areverse`, '-ac', '1', '-ar', String(SR), '-f', 's16le', '-'], { maxBuffer: 1 << 30 });
+  const trim = 'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.02', fade = 'afade=t=in:st=0:d=0.006';
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', file, '-af', `${trim},${fade},areverse,${trim},${fade},areverse`, '-ac', '1', '-ar', String(SR), '-f', 's16le', '-'], { maxBuffer: 1 << 30 });
   if (r.status !== 0) { console.error('could not decode', file, r.stderr.toString()); process.exit(1); }
   return r.stdout;
 }
 
-const lead = S.lead ?? 0.8, tail = S.tail ?? 1.5;
+const lead = S.lead ?? 0.8;
 const parts = [], lines = [];
 let t = lead;
 for (const [i, L] of S.lines.entries()) {
@@ -58,21 +61,36 @@ for (const [i, L] of S.lines.entries()) {
   parts.push([Math.round(t * SR), pcm]);
   t += dur + (L.after ?? 0.35);
 }
-const last = lines[lines.length - 1], total = last.t1 + tail;
+// "total" (s): the piece's exact length, so a re-take or a new pause never needs the tail recomputed by hand
+const last = lines[lines.length - 1], tail = S.total ? +(S.total - last.t1).toFixed(3) : S.tail ?? 1.5, total = last.t1 + tail;
+if (tail < 0) { console.error(`the lines run ${(-tail).toFixed(2)}s past "total" (${S.total}s)`); process.exit(1); }
 const out = Buffer.alloc(Math.ceil(total * SR) * 2);
 for (const [s0, pcm] of parts) pcm.copy(out, s0 * 2);
-const hdr = Buffer.alloc(44);
-hdr.write('RIFF', 0); hdr.writeUInt32LE(36 + out.length, 4); hdr.write('WAVE', 8); hdr.write('fmt ', 12);
-hdr.writeUInt32LE(16, 16); hdr.writeUInt16LE(1, 20); hdr.writeUInt16LE(1, 22); hdr.writeUInt32LE(SR, 24); hdr.writeUInt32LE(SR * 2, 28);
-hdr.writeUInt16LE(2, 32); hdr.writeUInt16LE(16, 34); hdr.write('data', 36); hdr.writeUInt32LE(out.length, 40);
+function wavFile(pcm) {
+  const hdr = Buffer.alloc(44);
+  hdr.write('RIFF', 0); hdr.writeUInt32LE(36 + pcm.length, 4); hdr.write('WAVE', 8); hdr.write('fmt ', 12);
+  hdr.writeUInt32LE(16, 16); hdr.writeUInt16LE(1, 20); hdr.writeUInt16LE(1, 22); hdr.writeUInt32LE(SR, 24); hdr.writeUInt32LE(SR * 2, 28);
+  hdr.writeUInt16LE(2, 32); hdr.writeUInt16LE(16, 34); hdr.write('data', 36); hdr.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([hdr, pcm]);
+}
 const wav = path.join(VDIR, 'voice.wav');
-fs.writeFileSync(wav, Buffer.concat([hdr, out]));
+fs.writeFileSync(wav, wavFile(out));
 
 // ---- word times: what the recogniser heard, matched to the script's words line by line
-const norm = (w) => w.toLowerCase().replace(/[^a-z0-9]/g, '');
+const norm = (w) => w.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');   // accents folded (pt, es, fr ...)
 let heard = null;
-const py = spawnSync(process.platform === 'win32' ? 'python' : 'python3', [path.join(HERE, 'voice_words.py'), wav, '--model', opt('--model', 'small.en')], { maxBuffer: 1 << 26 });
-if (py.status === 0) { try { heard = JSON.parse(py.stdout.toString().trim().split('\n').pop()); } catch { heard = null; } }
+// heard take by take (a lone line is read far better than one lost in a long file), and kept in voice/.heard.json by the take's
+// audio: a new pause never runs the recogniser, and a re-take only for that take
+const HEARD = path.join(VDIR, '.heard.json'), cache = fs.existsSync(HEARD) ? JSON.parse(fs.readFileSync(HEARD, 'utf8')) : {};
+const sigs = parts.map(([, pcm]) => createHash('sha1').update(pcm).digest('hex'));
+const todo = parts.map((p, i) => i).filter((i) => !cache[sigs[i]]);
+if (todo.length) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'voice-')), files = todo.map((i) => { const f = path.join(tmp, `${i}.raw.wav`); fs.writeFileSync(f, wavFile(parts[i][1])); return f; });
+  const py = spawnSync(process.platform === 'win32' ? 'python' : 'python3', [path.join(HERE, 'voice_words.py'), ...files, '--model', opt('--model', S.lang && S.lang !== 'en' ? 'small' : 'small.en'), '--lang', S.lang || 'en'], { maxBuffer: 1 << 26 });
+  if (py.status === 0) { try { JSON.parse(py.stdout.toString().trim().split('\n').pop()).forEach((w, k) => { cache[sigs[todo[k]]] = w; }); fs.writeFileSync(HEARD, JSON.stringify(cache)); } catch { /* falls through to the estimate */ } }
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+if (sigs.every((sg) => cache[sg])) heard = lines.flatMap((L, i) => cache[sigs[i]].map((h) => ({ w: h.w, t0: +(h.t0 + L.t0).toFixed(3), t1: +(h.t1 + L.t0).toFixed(3) })));
 if (!heard) console.warn('word times: faster-whisper unavailable (pip install faster-whisper) — estimating from the letters');
 let matched = 0, totalWords = 0;
 for (const L of lines) {
@@ -102,7 +120,13 @@ for (const L of lines) {
     i = j - 1;
   }
 }
-const voice = { duration: +total.toFixed(3), lead, tail, lines };
+// the voice's loudness per frame (0..1), so a character's mouth can follow its own voice syllable by syllable (VOICE.env)
+const PJ = fs.existsSync(path.join(ROOT, 'piece.json')) ? JSON.parse(fs.readFileSync(path.join(ROOT, 'piece.json'), 'utf8')) : {};
+const envFps = (PJ.format && PJ.format.fps) || 24, hop = Math.round(SR / envFps), all = out, nFr = Math.floor(all.length / 2 / hop), rms = new Float32Array(nFr);
+for (let f = 0; f < nFr; f++) { let s2 = 0; for (let i = 0; i < hop; i++) { const v = all.readInt16LE((f * hop + i) * 2) / 32768; s2 += v * v; } rms[f] = Math.sqrt(s2 / hop); }
+const loud = [...rms].filter((v) => v > 1e-4).sort((a, b) => a - b), ref = loud.length ? loud[Math.floor(loud.length * 0.97)] : 1;
+const env = [...rms].map((v) => +Math.min(1, v / ref).toFixed(3));
+const voice = { duration: +total.toFixed(3), lead, tail, lines, envFps, env };
 fs.writeFileSync(path.join(ROOT, 'voice.json'), JSON.stringify(voice, null, 1));
 console.log(`voice: ${lines.length} lines, ${totalWords} words, ${total.toFixed(2)}s (lead ${lead}s, tail ${tail}s); word times ${heard ? `${matched}/${totalWords} heard, the rest filled in` : 'estimated'}`);
 for (const L of lines) console.log(`  ${L.id.padEnd(10)} ${L.t0.toFixed(2)}-${L.t1.toFixed(2)}s  ${(L.words.length / (L.t1 - L.t0)).toFixed(2)} w/s  ${L.take}  "${L.text}"`);

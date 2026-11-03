@@ -60,6 +60,7 @@ const EZ = {
 let ctx = null;   // current 2d context
 let F = 0;        // absolute frame index
 let B = 0;        // boil index — reseeds every 2 frames (Math.floor(t*12))
+let RS = 1;       // render scale of the canvas being drawn: eras draw at STYLE.scale (e.g. 0.5) when a style asks for it, the frame itself at 1
 
 const C = {
   ink: '#3a2417', cream: '#efe5cf', paper: '#f4ecd9', paperLine: 'rgba(90,130,190,0.32)',
@@ -397,10 +398,11 @@ function irisHole(cx, cy, r, o = {}) {
 // world point (cx,cy) lands at screen centre
 function camera(cx, cy, zoom = 1, rot = 0, sx = 0, sy = 0) {
   const c = Math.cos(rot) * zoom, s = Math.sin(rot) * zoom;
-  ctx.setTransform(c, s, -s, c, W / 2 + sx - (c * cx - s * cy), H / 2 + sy - (s * cx + c * cy));
+  ctx.setTransform(c * RS, s * RS, -s * RS, c * RS, (W / 2 + sx - (c * cx - s * cy)) * RS, (H / 2 + sy - (s * cx + c * cy)) * RS);
 }
-function screen() { ctx.setTransform(1, 0, 0, 1, 0, 0); }
-function toScreen(x, y) { const p = ctx.getTransform().transformPoint(new DOMPoint(x, y)); return [p.x, p.y]; }
+// screen space: frame pixels (0..W, 0..H), whatever the render scale of the canvas being drawn
+function screen() { ctx.setTransform(RS, 0, 0, RS, 0, 0); }
+function toScreen(x, y) { const p = ctx.getTransform().transformPoint(new DOMPoint(x, y)); return [p.x / RS, p.y / RS]; }
 function fillAll(color) { ctx.save(); screen(); ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); ctx.restore(); }
 
 // monospace text with per-glyph hand jitter

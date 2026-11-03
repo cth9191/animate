@@ -369,7 +369,7 @@ const STYLE = {
   ones: true,
   backdrop(c) { fillAll(c); },
   window(P, key, src) {
-    ctx.save(); polyPath(P); ctx.clip(); ctx.drawImage(src, 0, 0); ctx.restore();
+    ctx.save(); polyPath(P); ctx.clip(); ctx.drawImage(src, 0, 0, W, H); ctx.restore();
     ctx.save(); polyPath(P); ctx.strokeStyle = rimOf(key); ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore();
   },
   blob(P, c, key) {

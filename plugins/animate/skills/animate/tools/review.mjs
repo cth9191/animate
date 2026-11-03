@@ -117,6 +117,9 @@ const labelSize = Math.round(((VERTICAL ? 60 : 40) * FW) / 1080);
 const safeBoxes = VERTICAL
   ? `drawbox=x=0:y=0:w=iw:h=${SAFE.top}:color=red@0.22:t=fill,drawbox=x=0:y=ih-${SAFE.bottom}:w=iw:h=${SAFE.bottom}:color=red@0.22:t=fill,drawbox=x=iw-${SAFE.right}:y=${SAFE.top}:w=${SAFE.right}:h=ih-${SAFE.top + SAFE.bottom}:color=red@0.22:t=fill,`
   : '';
+// the frames export.mjs wrote: JPEG (default) or PNG (--png)
+const FRAMES_DIR = process.env.ANIMATE_FRAMES ? path.join(process.env.ANIMATE_FRAMES, path.basename(ROOT)) : path.join(ROOT, 'frames');
+const FRAME_EXT = fs.existsSync(path.join(FRAMES_DIR, 'f0000.jpg')) ? 'jpg' : 'png';
 for (const shot of T.shots) {
   const f0 = Math.round(shot.t0 * T.fps), f1 = Math.round(shot.t1 * T.fps) - 1;
   const picks = [];
@@ -124,9 +127,10 @@ for (const shot of T.shots) {
   const uniq = [...new Set(picks)], rows = Math.ceil(uniq.length / cols);
   const tag = `shot${String(shot.id).padStart(2, '0')}`;
   const sheet = path.join(REVIEW, `${tag}-sheet.jpg`);
-  const sel = uniq.map((f) => `eq(n\\,${f})`).join('+');
-  let r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-framerate', String(T.fps), '-start_number', '0', '-i', path.join(ROOT, 'frames', 'f%04d.png'),
-    '-vf', `${safeBoxes}drawtext=${font}:text='%{pts\\:hms}  f%{n}':x=14:y=14:fontsize=${labelSize}:fontcolor=yellow:box=1:boxcolor=black@0.65:boxborderw=6,select='${sel}',scale=${cellW}:${cellH},tile=${cols}x${rows}`,
+  // decode only this shot's frames (start at its first frame), not the whole piece from frame 0 for every shot
+  const sel = uniq.map((f) => `eq(n\\,${f - f0})`).join('+');
+  let r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-framerate', String(T.fps), '-start_number', String(f0), '-t', ((f1 - f0 + 1) / T.fps).toFixed(4), '-i', path.join(FRAMES_DIR, `f%04d.${FRAME_EXT}`),
+    '-vf', `${safeBoxes}drawtext=${font}:text='%{pts\\:hms\\:${(f0 / T.fps).toFixed(4)}}  f%{eif\\:n+${f0}\\:d}':x=14:y=14:fontsize=${labelSize}:fontcolor=yellow:box=1:boxcolor=black@0.65:boxborderw=6,select='${sel}',scale=${cellW}:${cellH},tile=${cols}x${rows}`,
     '-frames:v', '1', '-q:v', '3', sheet], { stdio: 'inherit' });
   if (r.status !== 0) throw new Error('sheet failed for shot ' + shot.id);
   const refs = (REF_FOR[shot.id] || []).map(refPath).filter((p) => fs.existsSync(p));

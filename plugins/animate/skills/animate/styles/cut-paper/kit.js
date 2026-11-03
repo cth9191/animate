@@ -196,7 +196,7 @@ const STYLE = {
   window(P, key, src) {   // the world seen through a hand-cut window: torn edge, paper rim, shadow
     const Q = torn(wobble(P, true, 3, key, 9), key, 2.4);
     ctx.save(); ctx.shadowColor = 'rgba(35,20,10,0.35)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6; trace(Q, true); ctx.fillStyle = STYLE.paper; ctx.fill(); ctx.restore();
-    ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(src, 0, 0); ctx.restore();
+    ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(src, 0, 0, W, H); ctx.restore();
     ctx.save(); trace(Q, true); ctx.strokeStyle = '#fbf6ea'; ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore();
   },
   blob(P, c, key) { cut(P, c, { key, tear: 1.0, amt: 1.2 }); },

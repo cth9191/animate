@@ -293,7 +293,7 @@ const STYLE = {
   backdrop(c) { fillAll(c); },
   window(P, key, src) {   // src seen through outline P, drawn as a slab: a light thickness line under a hairline rim
     polyPath(thickDrop(P), true); hair(PAL.inner); ctx.stroke();
-    ctx.save(); polyPath(P, true); ctx.clip(); ctx.drawImage(src, 0, 0); ctx.restore();
+    ctx.save(); polyPath(P, true); ctx.clip(); ctx.drawImage(src, 0, 0, W, H); ctx.restore();
     polyPath(P, true); hair(PAL.edge); ctx.stroke();
   },
   blob(P, c, key) {   // the morphing shape: a hairline slab; the fill follows the stroke from accent-dark to face-white

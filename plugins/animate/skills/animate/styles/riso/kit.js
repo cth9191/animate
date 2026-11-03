@@ -409,7 +409,7 @@ const STYLE = {
   },
   window(P, key, src) {   // the world printed inside outline P, with a rough teal printed rim
     const Q = wobble(P, true, 2, key, 9);
-    ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(src, 0, 0); ctx.restore();
+    ctx.save(); trace(Q, true); ctx.clip(); ctx.drawImage(src, 0, 0, W, H); ctx.restore();
     if (!Q.some(([x, y]) => x > -20 && x < W + 20 && y > -20 && y < H + 20)) return;
     beginSheet(bbox(Q, 24));
     printed(PITCH.world, { auto: true }, () => rimLine(Q, key + 'rim', { w: 11, amt: 1.6 }));

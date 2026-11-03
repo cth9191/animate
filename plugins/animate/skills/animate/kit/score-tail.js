@@ -34,6 +34,14 @@ async function renderAudioStems() {
   const music = await buildScore(48000, 'music', mix.norm), sfx = await buildScore(48000, 'sfx', mix.norm);
   return { music: wavB64(music), sfx: wavB64(sfx) };
 }
+// everything export needs in one pass: the mix once (its loudness curve is shared by the stems), then the music and
+// sfx stems rendered side by side (each OfflineAudioContext renders on its own audio thread)
+async function renderAudioAll() {
+  const mix = await buildScore(48000, 'mix');
+  const [music, sfx] = await Promise.all([buildScore(48000, 'music', mix.norm), buildScore(48000, 'sfx', mix.norm)]);
+  return { mix: wavB64(mix), music: wavB64(music), sfx: wavB64(sfx) };
+}
+window.renderAudioAll = renderAudioAll;
 window.renderAudioWav = renderAudioWav;
 window.renderAudioStems = renderAudioStems;
 </script>

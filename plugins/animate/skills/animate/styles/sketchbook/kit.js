@@ -436,7 +436,7 @@ const STYLE = {
     ctx.shadowColor = 'rgba(70,64,58,0.42)'; ctx.shadowBlur = 26; ctx.shadowOffsetX = 10; ctx.shadowOffsetY = 14;
     trace(P, true); ctx.fillStyle = SK.paper; ctx.fill();
     ctx.restore();
-    ctx.save(); trace(P, true); ctx.clip(); ctx.drawImage(src, 0, 0); ctx.restore();
+    ctx.save(); trace(P, true); ctx.clip(); ctx.drawImage(src, 0, 0, W, H); ctx.restore();
     gpencil(P, { closed: true, w: 3, a: 0.6, amp: 3.2, key: key + 'c', step: 14 });
     gline(P, { closed: true, w: 5.5, key: key + 'rim', step: 14 });
   },

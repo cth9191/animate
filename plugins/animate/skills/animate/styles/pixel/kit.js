@@ -500,7 +500,7 @@ const STYLE = {
     ctx.fillStyle = PIX_UI.shadow; maskPath(maskOr(u1, r2), G, 1, 1); ctx.fill();
     ctx.fillStyle = rd; maskPath(r2, G); ctx.fill();
     ctx.fillStyle = rl; maskPath(r1, G); ctx.fill();
-    maskPath(m, G); ctx.clip(); ctx.drawImage(src, 0, 0);
+    maskPath(m, G); ctx.clip(); ctx.drawImage(src, 0, 0, W, H);
     ctx.restore();
   },
   blob(P, c, key) {   // the morphing shape as chunky pixels: the grid steps from one era's resolution to the next

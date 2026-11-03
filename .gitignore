@@ -7,3 +7,6 @@ __pycache__/
 # built files (tools/build.mjs makes them from src/ + kit/ + the style)
 plugins/**/index.html
 plugins/**/review/
+# your own work stays local: series bibles, scripts, cast and pieces are never pushed
+/series/
+/pieces/

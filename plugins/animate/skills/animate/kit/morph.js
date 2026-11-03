@@ -58,14 +58,22 @@ function maskK(P) {   // how far the window must scale about its centroid to cov
 const scaled = (P, c, k) => P.map(([x, y]) => [c[0] + (x - c[0]) * k, c[1] + (y - c[1]) * k]);
 // ---- layers and windows
 const LAYER = [];
-function layer(i) { if (!LAYER[i]) { const c = document.createElement('canvas'); c.width = W; c.height = H; LAYER[i] = c; } return LAYER[i]; }
+// STYLE.scale (0.25..1, default 1): eras draw into layers at that fraction of the frame and are upscaled into it.
+// For looks that throw detail away anyway (a VHS tape, a print, pixels), it cuts the raster work by 1/scale²;
+// captions and tags (DEFER) still draw at full resolution. STYLE.window gets the small layer: draw it with drawImage(src, 0, 0, W, H).
+const LAYER_SCALE = () => clamp((typeof STYLE === 'object' && STYLE.scale) || 1, 0.25, 1);
+function layer(i) {
+  const s = LAYER_SCALE(), w = Math.round(W * s), h = Math.round(H * s);
+  if (!LAYER[i] || LAYER[i].width !== w || LAYER[i].height !== h) { const c = document.createElement('canvas'); c.width = w; c.height = h; LAYER[i] = c; }
+  return LAYER[i];
+}
 function renderEra(e, target) {   // draws era e into target; returns its overlay queue (year tag, caption)
-  const saved = ctx; ctx = target.getContext('2d');
+  const saved = ctx; ctx = target.getContext('2d'); RS = target.width / W;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.filter = 'none'; ctx.setLineDash([]);
-  ctx.fillStyle = STYLE.paper; ctx.fillRect(0, 0, W, H);   // a clean sheet every frame: nothing carries over between frames
-  const cam = camAt(e, TT); ctx.setTransform(cam.z, 0, 0, cam.z, cam.tx, cam.ty);
+  ctx.fillStyle = STYLE.paper; ctx.fillRect(0, 0, target.width, target.height);   // a clean sheet every frame: nothing carries over between frames
+  const cam = camAt(e, TT); ctx.setTransform(cam.z * RS, 0, 0, cam.z * RS, cam.tx * RS, cam.ty * RS);
   DEFER = []; ERA_LIST[e][2](); const q = DEFER; DEFER = null;
-  ctx.restore(); ctx = saved;
+  ctx.restore(); ctx = saved; RS = 1;
   return q;
 }
 function flush(q, e) { const keep = E0; E0 = ERA_LIST[e][0]; ctx.setTransform(1, 0, 0, 1, 0, 0); q.forEach((f) => f()); E0 = keep; }
@@ -91,7 +99,7 @@ function renderFrame(t, canvas, sub) {
   const bd = (r) => r.d ?? 0.6, bm = (r) => r.m ?? (r.d != null ? r.d / 3 : 0.2);
   const tr = BRIDGES.find((r) => TT >= r.tc - bd(r) - 1e-6 && TT < r.tc + bd(r) - 1e-6);
   if (!tr) {
-    const q = renderEra(e, layer(0)); ctx.drawImage(layer(0), 0, 0); flush(q, e);
+    const q = renderEra(e, layer(0)); ctx.drawImage(layer(0), 0, 0, W, H); flush(q, e);
   } else {
     const ea = eraAt(tr.tc - 0.01), eb = eraAt(tr.tc + 0.01);
     const sa = shapeOf(tr.A()), sb = shapeOf(tr.B());

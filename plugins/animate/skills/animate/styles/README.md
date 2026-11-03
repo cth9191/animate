@@ -13,6 +13,7 @@ Build the gallery of every style's sample: `node tools/gallery.mjs styles.png [<
 | [math](math/STYLE.md) | a manim-style math explainer: black stage, axes and graphs, colour-coded variables, smooth easing | on 1s | two short math explainers |
 | [isometric](isometric/STYLE.md) | isometric product line art: constant hairlines, white faces, rounded slabs, one dark accent; light or dark ground | on 1s, spring settles | this demo (the first style made with new-style.md) |
 | [pixel](pixel/STYLE.md) | low-resolution eras: draw at the true resolution, upscale nearest-neighbour | on 1s or 2s | a fixed-stage history of AI video |
+| [vhs](vhs/STYLE.md) | analog horror on a worn tape: a lit, shaded scene (felt, wool, metal, glass eyes, light cones) through a VHS deck — chroma bleed, tracking, snow, the deck's OSD; servo motion | on 1s, scenes at half resolution | a 120s narrated found-tape episode |
 | custom | any other look: show it a video, stills or a web page and it measures the style, matches frames with you and saves `styles/<name>/` ([new-style.md](../new-style.md)) | either | woodblock prints, neon signs (test runs) |
 
 A new look gets made from the user's references with [new-style.md](../new-style.md), then saved as a style beside the project's pieces (`<project>/styles/<name>/`), where `build.mjs` finds it.
@@ -43,6 +44,8 @@ const STYLE = {
   heroColor: '#hex', heroPts(x, y, r, n) { ... },   // the hero's colour and outline for bridges (optional)
   post() { ... },                // after every frame: grain, a print pass, an upscale (optional)
   ones: false,                   // true = motion on 1s (TT = every frame); default on 2s
+  scale: 1,                      // eras draw at this fraction of the frame (0.25..1) and are upscaled: 0.5 = 4x less raster work
+                                 //   for looks that lose detail anyway (tape, print, pixels); captions (DEFER) stay full resolution
 };
 ```
 
